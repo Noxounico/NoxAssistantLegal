@@ -1147,4 +1147,4 @@ client.on('interactionCreate', async (interaction) => {
 });
 
 // Inicialização compatível tanto com process.env.TOKEN como process.env.DISCORD_TOKEN
-client.login(process.env.DISCORD_TOKEN || process.env.TOKEN);
+client.login(process.env.TOKEN);
