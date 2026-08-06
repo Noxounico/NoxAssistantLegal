@@ -80,7 +80,6 @@ const CONFIG = {
     CANAL_AGENDA_ID: '1533246749249114312',
     CANAL_ANUNCIOS_ID: '1527000712779927612',
 
-    CANAL_VOTACOES_ID: '1527002314513186866',
     CARGO_IDEIAS_ID: '1532811905071321218', 
     PREFIXO: '!',
     
@@ -141,10 +140,10 @@ const CONFIG = {
     ],
 
     EMOJIS: {
-        sucesso: '<:sucess:1520249613901103135>',
+        sucesso: '<:correct:1535003452575322192>',
         aviso: '<:192440warningicon:1533451130049265704>',
         info: '<:info:1520249612542279780>',
-        cancelar: '<:cancel:1520249621589524571>',
+        cancelar: '<:errado:1535004198339608677>',
         ticket: '<:ticket:1520278432687325195>',
         // ID de emoji personalizado atualizado (válido, enviado pelo utilizador)
         auth: '<:272410anonymous:1533449386594664509>',
@@ -290,7 +289,7 @@ client.on('messageCreate', async (message) => {
             .setColor(0x5865F2)
             .setDescription(`Aqui estão todos os comandos (\`${CONFIG.PREFIXO}\`) que podes utilizar:`)
             .addFields(
-                { name: '👤 Geral / Membros', value: '`!comandos` - Mostra esta lista\n`!relatorio` - Abre formulário de relatório\n`!sugestoes` - Envia o painel de sugestões\n`!avisos` - Envia o painel de avisos\n`!agenda` - Envia o painel de agenda\n`!votacoes` - Abre o painel para criar uma votação\n`!hierarquia` - Mostra a hierarquia da organização' },
+                { name: '👤 Geral / Membros', value: '`!comandos` - Mostra esta lista\n`!relatorio` - Abre formulário de relatório\n`!sugestoes` - Envia o painel de sugestões\n`!avisos` - Envia o painel de avisos\n`!agenda` - Envia o painel de agenda\n`!hierarquia` - Mostra a hierarquia da organização' },
                 { name: '🛡 Gestão de Cargos & Staff', value: '`!pedirset` - Envia o painel de sets (Admin)\n`!recrutamento` - Envia o painel de registo de recrutamento (Admin)\n`!anuncios` - Envia o botão de criar anúncio (Admin)\n`!reuniao` - Envia aviso de reunião por DM (Admin)\n`!clear [1-99]` - Limpa mensagens (Moderadores)' }
             )
             .setFooter({ text: 'NoxAssistant 2026 ©' });
@@ -536,23 +535,6 @@ client.on('messageCreate', async (message) => {
         return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} **${amount}** mensagens limpas com sucesso!` });
     }
 
-    if (commandName === 'votacoes' || commandName === 'votaçoes') {
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId('btn_abrir_votacao')
-                .setLabel('📊 Criar Nova Votação')
-                .setStyle(ButtonStyle.Primary)
-        );
-        const payload = v2({
-            content: `## 📊 Votações / Sondagens\nQueres saber a opinião da comunidade sobre alguma coisa?\n\n> Clica no botão abaixo para criares uma votação. Vai ser publicada automaticamente no canal de votações e todos podem reagir com 👍 ou 👎.\n\n-# A votação fica associada ao teu nome de utilizador.`,
-            imageUrl: 'https://i.postimg.cc/VNPjBpps/Design-sem-nome-(2).png',
-            footer: '-# NoxAssistant 2026 ©',
-            accentColor: 0x3498DB
-        }, [row]);
-
-        await message.channel.send(payload);
-        return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Painel de votações enviado com sucesso!` });
-    }
 });
 
 client.on('interactionCreate', async (interaction) => {
@@ -682,28 +664,6 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     if (interaction.isModalSubmit()) {
-        if (interaction.customId === 'modal_votacao') {
-            await interaction.deferReply({ flags: 64 });
-            const textoVotacao = interaction.fields.getTextInputValue('input_texto_votacao');
-            const canalVotacoes = interaction.guild.channels.cache.get(CONFIG.CANAL_VOTACOES_ID);
-
-            if (!canalVotacoes) {
-                return interaction.editReply({ content: `${CONFIG.EMOJIS.cancelar} Canal de votações não configurado.` });
-            }
-
-            const embed = new EmbedBuilder()
-                .setTitle('📊 Votação / Sondagem')
-                .setDescription(textoVotacao)
-                .setColor(0x3498DB)
-                .setFooter({ text: `Votação iniciada por ${interaction.user.tag}` });
-
-            const votacaoMsg = await canalVotacoes.send({ embeds: [embed] });
-            await votacaoMsg.react('👍');
-            await votacaoMsg.react('👎');
-
-            return interaction.editReply({ content: `${CONFIG.EMOJIS.sucesso} Votação enviada com sucesso para ${canalVotacoes}!` });
-        }
-
         if (interaction.customId === 'modal_anuncio') {
             await interaction.deferReply({ flags: 64 });
             const tituloAnuncio = interaction.fields.getTextInputValue('input_titulo_anuncio');
@@ -867,12 +827,12 @@ client.on('interactionCreate', async (interaction) => {
                     .setCustomId(`aprovar_ideia_${ideiaId}_${interaction.user.id}`)
                     .setLabel('Aceitar Ideia')
                     .setStyle(ButtonStyle.Success)
-                    .setEmoji('1520249613901103135'),
+                    .setEmoji('1535003452575322192'),
                 new ButtonBuilder()
                     .setCustomId(`rejeitar_ideia_${ideiaId}_${interaction.user.id}`)
                     .setLabel('Rejeitar Ideia')
                     .setStyle(ButtonStyle.Danger)
-                    .setEmoji('1520249615318782022')
+                    .setEmoji('1535004198339608677')
             );
 
             const payloadLog = v2({
@@ -912,12 +872,12 @@ client.on('interactionCreate', async (interaction) => {
                     .setCustomId(`aprovar_set_${role.id}_${interaction.user.id}_${nome}_${passaporte}`)
                     .setLabel('Aprovar e Dar Cargo')
                     .setStyle(ButtonStyle.Success)
-                    .setEmoji('1520249613901103135'),
+                    .setEmoji('1535003452575322192'),
                 new ButtonBuilder()
                     .setCustomId(`rejeitar_set_${interaction.user.id}`)
                     .setLabel('Rejeitar')
                     .setStyle(ButtonStyle.Danger)
-                    .setEmoji('1520249615318782022')
+                    .setEmoji('1535004198339608677')
             );
 
             const payloadLog = v2({
@@ -1023,21 +983,6 @@ client.on('interactionCreate', async (interaction) => {
             modal.addComponents(
                 new ActionRowBuilder().addComponents(horaInput),
                 new ActionRowBuilder().addComponents(motivoInput)
-            );
-
-            await interaction.showModal(modal);
-            return;
-        }
-
-        if (interaction.customId === 'btn_abrir_votacao') {
-            const modal = new ModalBuilder()
-                .setCustomId('modal_votacao')
-                .setTitle('Criar Votação / Sondagem');
-
-            const textoInput = new TextInputBuilder().setCustomId('input_texto_votacao').setLabel('Texto da Votação').setStyle(TextInputStyle.Paragraph).setPlaceholder('Ex: Devemos fazer evento sábado?').setRequired(true);
-
-            modal.addComponents(
-                new ActionRowBuilder().addComponents(textoInput)
             );
 
             await interaction.showModal(modal);
