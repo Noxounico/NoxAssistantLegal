@@ -122,15 +122,21 @@ const CONFIG = {
     // Como obter o ID de um cargo: Definições do Discord > Avançado > ativar "Modo de Programador",
     // depois vai a Definições do Servidor > Cargos, clica com o botão direito no cargo > "Copiar ID do Cargo".
     CATEGORIAS_HIERARQUIA: [
-        { titulo: 'HIERARQUIA', cargos: ['1527000274038947890'] },
-        { titulo: 'ADM', cargos: ['1527000248982175764'] },
-        { titulo: 'AUX', cargos: ['1527000221089796236'] },
-        { titulo: 'LID', cargos: ['1527001475652522267'] },
-        { titulo: 'SUB', cargos: ['1527000194548502632'] },
-        { titulo: 'ELITE', cargos: ['1527000169537605703'] },
-        { titulo: 'JUNIOR', cargos: ['COLOCA_AQUI_O_ID_DO_CARGO_JUNIOR'] },
-        { titulo: 'TESTE', cargos: ['COLOCA_AQUI_O_ID_DO_CARGO_TESTE'] },
-        { titulo: 'MEMBRO', cargos: ['1527000128953516052'] }
+        { titulo: 'CORONEL', cargos: ['1534491177720483861'] },
+        { titulo: 'TENENTE-CORONEL', cargos: ['1534491178425254039'] },
+        { titulo: 'MAJOR', cargos: ['1534491180002185317'] },
+        { titulo: 'CAPITÃO', cargos: ['1534491181050888314'] },
+        { titulo: '1º TENENTE', cargos: ['1534491183865266226'] },
+        { titulo: '2º TENENTE', cargos: ['1534491184557199461'] },
+        { titulo: 'ASPIRANTE', cargos: ['1534491185396318302'] },
+        { titulo: 'SUB-TENENTE', cargos: ['1534491186251956275'] },
+        { titulo: '1º SARGENTO', cargos: ['1534491187044552826'] },
+        { titulo: '2º SARGENTO', cargos: ['1534491187808043101'] },
+        { titulo: '3º SARGENTO', cargos: ['1534491188487262359'] },
+        { titulo: 'CABO', cargos: ['1534491189296894022'] },
+        { titulo: 'SOLDADO', cargos: ['1534491190483750972'] },
+        { titulo: 'RECRUTA', cargos: ['1534491191205171381'] },
+        { titulo: 'C.O.R.E', cargos: ['1534491196783853568'] }
     ],
 
     EMOJIS: {
