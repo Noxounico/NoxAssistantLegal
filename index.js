@@ -110,7 +110,7 @@ const CONFIG = {
     // ---- Configuração do comando !hierarquia ----
     // Para cada categoria, "cargos" é uma lista de IDs de cargo (roles) do Discord.
     // Todos os membros que tiverem QUALQUER um desses cargos aparecem listados nessa secção.
-    // ⚠️ TENS DE SUBSTITUIR os valores "COLOCA_AQUI_..." pelos IDs reais dos teus cargos!
+    // ⚠ TENS DE SUBSTITUIR os valores "COLOCA_AQUI_..." pelos IDs reais dos teus cargos!
     // Como obter o ID de um cargo: Definições do Discord > Avançado > ativar "Modo de Programador",
     // depois vai a Definições do Servidor > Cargos, clica com o botão direito no cargo > "Copiar ID do Cargo".
     CATEGORIAS_HIERARQUIA: [
@@ -227,7 +227,7 @@ client.once('clientReady', async () => {
     try {
         const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
         await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
-        console.log('🗑️ Comandos de barra (/) antigos removidos.');
+        console.log('🗑 Comandos de barra (/) antigos removidos.');
     } catch (error) {
         console.error('Erro ao remover comandos de barra antigos:', error);
     }
@@ -316,7 +316,7 @@ client.on('messageCreate', async (message) => {
             .setDescription(`Aqui estão todos os comandos (\`${CONFIG.PREFIXO}\`) que podes utilizar:`)
             .addFields(
                 { name: '👤 Geral / Membros', value: '`!comandos` - Mostra esta lista\n`!relatorio` - Abre formulário de relatório\n`!ideias` - Envia o painel de ideias\n`!avisos` - Envia o painel de avisos\n`!agenda` - Envia o painel de agenda\n`!votacoes` - Abre o painel para criar uma votação\n`!hierarquia` - Mostra a hierarquia da organização' },
-                { name: '🛡️ Gestão de Cargos & Staff', value: '`!pedirset` - Envia o painel de sets (Admin)\n`!anuncios` - Envia o botão de criar anúncio (Admin)\n`!reuniao` - Envia aviso de reunião por DM (Admin)\n`!ranking` - Envia o painel de ranking (botões: registar pódio, fechar semana, resetar)\n`!clear [1-99]` - Limpa mensagens (Moderadores)' }
+                { name: '🛡 Gestão de Cargos & Staff', value: '`!pedirset` - Envia o painel de sets (Admin)\n`!anuncios` - Envia o botão de criar anúncio (Admin)\n`!reuniao` - Envia aviso de reunião por DM (Admin)\n`!ranking` - Envia o painel de ranking (botões: registar pódio, fechar semana, resetar)\n`!clear [1-99]` - Limpa mensagens (Moderadores)' }
             )
             .setFooter({ text: 'NoxAssistant 2026 ©' });
 
@@ -605,7 +605,7 @@ function construirPainelRanking(dados) {
             const totalTerceiros = scores["3"] || 0;
             const emSequencia = dados.sequencia.equipa === faccao ? dados.sequencia.contagem : 0;
 
-            corpo += `🛡️ **${faccao}**\n`;
+            corpo += `🛡 **${faccao}**\n`;
             if (emSequencia > 1) {
                 corpo += `> 🔥 **Esta fação venceu ${emSequencia}x consecutivas!**\n`;
             }
@@ -619,7 +619,7 @@ function construirPainelRanking(dados) {
     const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId('btn_ranking_registar').setLabel('Registar Pódio').setEmoji('🏆').setStyle(ButtonStyle.Success),
         new ButtonBuilder().setCustomId('btn_ranking_fecharsemana').setLabel('Fechar Semana').setEmoji('📅').setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId('btn_ranking_reset').setLabel('Resetar').setEmoji('♻️').setStyle(ButtonStyle.Danger)
+        new ButtonBuilder().setCustomId('btn_ranking_reset').setLabel('Resetar').setEmoji('♻').setStyle(ButtonStyle.Danger)
     );
 
     return v2({
