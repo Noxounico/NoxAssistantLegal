@@ -450,7 +450,7 @@ client.on('messageCreate', async (message) => {
             .addOptions(optionsMenu);
         const row = new ActionRowBuilder().addComponents(selectMenu);
         const payload = v2({
-            content: `## ${CONFIG.EMOJIS.auth} Solicitação de Set / Cargos\nSeja bem-vindo(a) ao sistema de solicitação da nossa cidade!\n\n> Utilize o menu abaixo para selecionar o cargo desejado. A nossa equipa de Staff irá analisar o seu pedido o mais rápido possível.\n> \n> Lembre-se de ter os seus requisitos prontos ao abrir o ticket.\n\n-# Ao selecionar, um canal privado será criado para análise da Staff.`,
+            content: `## <:AK47:1534850499948449872> Solicitação de Set / Cargos\nSeja bem-vindo(a) ao sistema de solicitação da nossa cidade!\n\n> Utilize o menu abaixo para selecionar o cargo desejado. A nossa equipa de Staff irá analisar o seu pedido o mais rápido possível.\n> \n> Lembre-se de ter os seus requisitos prontos ao abrir o ticket.\n\n-# Ao selecionar, um canal privado será criado para análise da Staff.`,
             imageUrl: 'https://i.postimg.cc/VNPjBpps/Design-sem-nome-(2).png',
             footer: '-# NoxAssistant 2026 ©',
             accentColor: 0x2F3136
