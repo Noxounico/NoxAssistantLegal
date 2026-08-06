@@ -141,7 +141,7 @@ const CONFIG = {
 
     EMOJIS: {
         sucesso: '<:correct:1535003452575322192>',
-        aviso: '<:192440warningicon:1533451130049265704>',
+        aviso: '<:alerta:1535009548878745758>',
         info: '<:info:1520249612542279780>',
         cancelar: '<:errado:1535004198339608677>',
         ticket: '<:ticket:1520278432687325195>',
