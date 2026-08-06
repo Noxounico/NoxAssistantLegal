@@ -492,7 +492,7 @@ client.on('messageCreate', async (message) => {
                 .setStyle(ButtonStyle.Success)
         );
         const payload = v2({
-            content: `## ${CONFIG.EMOJIS.auth} Registo de Recrutamento\nFizeste um recrutamento? Regista aqui para ficar registado no sistema!\n\n> Clica no botão abaixo e preenche os dados do recruta.\n\n-# O registo será enviado para análise da Staff.`,
+            content: `## <:cowboy:1534995010003665047> Registo de Recrutamento\nFizeste um recrutamento? Regista aqui para ficar registado no sistema!\n\n> Clica no botão abaixo e preenche os dados do recruta.\n\n-# O registo será enviado para análise da Staff.`,
             imageUrl: 'https://i.postimg.cc/VNPjBpps/Design-sem-nome-(2).png',
             footer: '-# NoxAssistant 2026 ©',
             accentColor: 0x2F3136
