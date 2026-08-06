@@ -79,7 +79,6 @@ const CONFIG = {
     CANAL_ANUNCIOS_ID: '1527000712779927612',
 
     CANAL_VOTACOES_ID: '1527002314513186866',
-    CANAL_RANKING_ID: '1527002450853367808',
     CARGO_IDEIAS_ID: '1532811905071321218', 
     PREFIXO: '!',
     
@@ -152,55 +151,6 @@ const pedidosPendentes = new Set();
 const ideiasPendentes = new Set();
 const relatoriosPendentes = new Set();
 const agendaPendentes = new Set();
-const RANKING_FILE = path.join(__dirname, 'ranking_data.json');
-
-function carregarRanking() {
-    try {
-        if (fs.existsSync(RANKING_FILE)) {
-            const dados = JSON.parse(fs.readFileSync(RANKING_FILE, 'utf8'));
-            if (!dados.faccoes) dados.faccoes = {};
-            if (!dados.sequencia) dados.sequencia = { equipa: null, contagem: 0 };
-            return dados;
-        }
-    } catch (e) {
-        console.error('Erro ao carregar ranking:', e);
-    }
-    return { faccoes: {}, sequencia: { equipa: null, contagem: 0 } };
-}
-
-function guardarRanking(data) {
-    try {
-        fs.writeFileSync(RANKING_FILE, JSON.stringify(data, null, 2), 'utf8');
-    } catch (e) {
-        console.error('Erro ao guardar ranking:', e);
-    }
-}
-
-// Regista um pódio (1º, 2º ou 3º lugar) para uma fação e atualiza a sequência global
-// de vitórias consecutivas em 1º lugar (só é quebrada quando OUTRA fação vence o 1º lugar).
-// Devolve uma frase extra (ex: "🔥 vai na 3ª vitória consecutiva!") ou string vazia.
-function registarPodioRanking(dados, faccao, lugar) {
-    if (!dados.faccoes[faccao]) {
-        dados.faccoes[faccao] = { "1": 0, "2": 0, "3": 0 };
-    }
-    dados.faccoes[faccao][lugar] += 1;
-
-    let extra = '';
-    if (lugar === '1') {
-        if (dados.sequencia.equipa === faccao) {
-            dados.sequencia.contagem += 1;
-        } else {
-            dados.sequencia.equipa = faccao;
-            dados.sequencia.contagem = 1;
-        }
-        if (dados.sequencia.contagem > 1) {
-            extra = ` 🔥 **${faccao}** vai na **${dados.sequencia.contagem}ª vitória consecutiva**!`;
-        }
-    }
-
-    guardarRanking(dados);
-    return extra;
-}
 
 async function responderETemporizar(interactionOrMessage, conteudo, ephemeral = true) {
     if (interactionOrMessage.replied || interactionOrMessage.deferred) {
@@ -324,8 +274,8 @@ client.on('messageCreate', async (message) => {
             .setColor(0x5865F2)
             .setDescription(`Aqui estão todos os comandos (\`${CONFIG.PREFIXO}\`) que podes utilizar:`)
             .addFields(
-                { name: '👤 Geral / Membros', value: '`!comandos` - Mostra esta lista\n`!relatorio` - Abre formulário de relatório\n`!ideias` - Envia o painel de ideias\n`!avisos` - Envia o painel de avisos\n`!agenda` - Envia o painel de agenda\n`!votacoes` - Abre o painel para criar uma votação\n`!hierarquia` - Mostra a hierarquia da organização' },
-                { name: '🛡 Gestão de Cargos & Staff', value: '`!pedirset` - Envia o painel de sets (Admin)\n`!anuncios` - Envia o botão de criar anúncio (Admin)\n`!reuniao` - Envia aviso de reunião por DM (Admin)\n`!ranking` - Envia o painel de ranking (botões: registar pódio, fechar semana, resetar)\n`!clear [1-99]` - Limpa mensagens (Moderadores)' }
+                { name: '👤 Geral / Membros', value: '`!comandos` - Mostra esta lista\n`!relatorio` - Abre formulário de relatório\n`!sugestoes` - Envia o painel de sugestões\n`!avisos` - Envia o painel de avisos\n`!agenda` - Envia o painel de agenda\n`!votacoes` - Abre o painel para criar uma votação\n`!hierarquia` - Mostra a hierarquia da organização' },
+                { name: '🛡 Gestão de Cargos & Staff', value: '`!pedirset` - Envia o painel de sets (Admin)\n`!anuncios` - Envia o botão de criar anúncio (Admin)\n`!reuniao` - Envia aviso de reunião por DM (Admin)\n`!clear [1-99]` - Limpa mensagens (Moderadores)' }
             )
             .setFooter({ text: 'NoxAssistant 2026 ©' });
 
@@ -402,7 +352,7 @@ client.on('messageCreate', async (message) => {
         return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Hierarquia enviada com sucesso!` });
     }
 
-    if (commandName === 'ideias') {
+    if (commandName === 'sugestoes') {
         const canalAlvo = message.channel;
         const optionsMenu = CONFIG.CATEGORIAS_IDEIAS.map(cat =>
             new StringSelectMenuOptionBuilder()
@@ -417,14 +367,14 @@ client.on('messageCreate', async (message) => {
             .addOptions(optionsMenu);
         const row = new ActionRowBuilder().addComponents(selectMenu);
         const payload = v2({
-            content: `## <:Ideias:1533453913166975057> Submissão de Ideias e Ações\nTem alguma proposta de evento, patrulha ou melhoria para a cidade?\n\n> Utilize o menu abaixo para escolher o tipo de submissão. A Administração irá analisar e dar feedback direto!\n\n-# As propostas são avaliadas pela equipa responsável.`,
+            content: `## 💡・sᴜɢᴇsᴛᴏᴇs\nTem alguma proposta de evento, patrulha ou melhoria para a cidade?\n\n> Utilize o menu abaixo para escolher o tipo de submissão. A Administração irá analisar e dar feedback direto!\n\n-# As propostas são avaliadas pela equipa responsável.`,
             imageUrl: 'https://i.postimg.cc/VNPjBpps/Design-sem-nome-(2).png',
             footer: '-# NoxAssistant 2026 ©',
             accentColor: 0x5865F2
         }, [row]);
 
         await canalAlvo.send(payload);
-        return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Painel de ideias enviado com sucesso!` });
+        return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Painel de sugestões enviado com sucesso!` });
     }
 
     if (commandName === 'avisos') {
@@ -566,109 +516,7 @@ client.on('messageCreate', async (message) => {
         await message.channel.send(payload);
         return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Painel de votações enviado com sucesso!` });
     }
-
-    if (commandName === 'ranking') {
-        const subCmd = (args[0] || 'ver').toLowerCase();
-        let dados = carregarRanking();
-        const canalRanking = message.guild.channels.cache.get(CONFIG.CANAL_RANKING_ID) || message.channel;
-
-        if (subCmd === 'registar') {
-            const lugar = args[args.length - 1];
-            const faccao = args.slice(1, -1).join(' ');
-
-            if (!faccao || !['1', '2', '3'].includes(lugar)) {
-                return responderEApagar({ content: `${CONFIG.EMOJIS.aviso} Usa \`!ranking registar <nome da facção> <1|2|3>\`, ex: \`!ranking registar Los Santos PD 1\`.` });
-            }
-
-            const extra = registarPodioRanking(dados, faccao, lugar);
-            return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Vitória registada para **${faccao}** (${lugar}º Lugar)!${extra}` });
-        }
-        else if (subCmd === 'reset') {
-            guardarRanking({ faccoes: {}, sequencia: { equipa: null, contagem: 0 } });
-            return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} O ranking foi reiniciado com sucesso!` });
-        }
-        else if (subCmd === 'fecharsemana') {
-            await fecharSemanaRanking(dados, canalRanking);
-            return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Semana fechada e resultados publicados com sucesso!` });
-        }
-        else {
-            const payload = construirPainelRanking(dados);
-            await canalRanking.send(payload);
-            return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Painel de ranking gerado com sucesso!` });
-        }
-    }
 });
-
-// Monta o embed + botões do painel de ranking (usado pelo !ranking e ao clicar em "Atualizar Painel")
-function construirPainelRanking(dados) {
-    let corpo = 'Acompanha o registo de vitórias e pódios de cada fação em tempo real:\n\n';
-    const faccoesEntries = Object.entries(dados.faccoes);
-
-    if (faccoesEntries.length === 0) {
-        corpo += '> *Ainda não existem registos de eventos esta semana.*';
-    } else {
-        for (const [faccao, scores] of faccoesEntries) {
-            const totalPrimeiros = scores["1"] || 0;
-            const totalSegundos = scores["2"] || 0;
-            const totalTerceiros = scores["3"] || 0;
-            const emSequencia = dados.sequencia.equipa === faccao ? dados.sequencia.contagem : 0;
-
-            corpo += `🛡 **${faccao}**\n`;
-            if (emSequencia > 1) {
-                corpo += `> 🔥 **Esta fação venceu ${emSequencia}x consecutivas!**\n`;
-            }
-            const textoGanho = totalPrimeiros === 1 ? 'Ganhou 1 Vez' : `Ganhou ${totalPrimeiros} Vezes`;
-            corpo += `> 🥇 **1º Lugar:** \`${totalPrimeiros}\` (${textoGanho})\n`;
-            corpo += `> 🥈 **2º Lugar:** \`${totalSegundos}\`\n`;
-            corpo += `> 🥉 **3º Lugar:** \`${totalTerceiros}\`\n\n`;
-        }
-    }
-
-    const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('btn_ranking_registar').setLabel('Registar Pódio').setEmoji('🏆').setStyle(ButtonStyle.Success),
-        new ButtonBuilder().setCustomId('btn_ranking_fecharsemana').setLabel('Fechar Semana').setEmoji('📅').setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId('btn_ranking_reset').setLabel('Resetar').setEmoji('♻').setStyle(ButtonStyle.Danger)
-    );
-
-    return v2({
-        content: `## 📊 Painel de Ranking de Eventos & Vitórias\n${corpo}`,
-        imageUrl: 'https://i.postimg.cc/VNPjBpps/Design-sem-nome-(2).png',
-        footer: '-# NoxAssistant 2026 ©',
-        accentColor: 0x3498DB
-    }, [row]);
-}
-
-// Publica o resumo semanal no canal de ranking e reinicia os dados
-async function fecharSemanaRanking(dados, canalRanking) {
-    let faccoesArr = Object.keys(dados.faccoes).map(f => ({
-        nome: f,
-        primOrd: dados.faccoes[f]["1"] || 0,
-        seguOrd: dados.faccoes[f]["2"] || 0,
-        tercOrd: dados.faccoes[f]["3"] || 0,
-        totalPontos: ((dados.faccoes[f]["1"] || 0) * 3) + ((dados.faccoes[f]["2"] || 0) * 2) + ((dados.faccoes[f]["3"] || 0) * 1)
-    }));
-
-    faccoesArr.sort((a, b) => b.totalPontos - a.totalPontos || b.primOrd - a.primOrd);
-
-    const v1 = faccoesArr.find(f => f.primOrd > 0) || faccoesArr[0] || { nome: 'Nenhuma', primOrd: 0 };
-    const v2Fac = faccoesArr.filter(f => f.nome !== v1.nome).sort((a, b) => b.seguOrd - a.seguOrd)[0] || { nome: 'Nenhuma', seguOrd: 0 };
-    const v3Fac = faccoesArr.filter(f => f.nome !== v1.nome && f.nome !== v2Fac.nome).sort((a, b) => b.tercOrd - a.tercOrd)[0] || { nome: 'Nenhuma', tercOrd: 0 };
-
-    const embedResumo = new EmbedBuilder()
-        .setTitle('🏆 Resumo Semanal do Ranking de Eventos')
-        .setColor(0xF1C40F)
-        .setDescription('Chegamos ao fim de mais uma semana de competição intensa! Aqui estão os resultados oficiais:')
-        .addFields(
-            { name: '🥇 1º Lugar Geral', value: `**${v1.nome}** conquistou mais primeiros lugares (${v1.primOrd || 0} vitórias em 1º lugar)!`, inline: false },
-            { name: '🥈 2º Lugar Geral', value: `**${v2Fac.nome}** destacou-se com consistência em 2º lugar (${v2Fac.seguOrd || 0} vezes)!`, inline: false },
-            { name: '🥉 3º Lugar Geral', value: `**${v3Fac.nome}** fechou o pódio garantindo o 3º lugar (${v3Fac.tercOrd || 0} vezes)!`, inline: false }
-        )
-        .setTimestamp()
-        .setFooter({ text: 'NoxAssistant 2026 © - Fecho Semanal' });
-
-    await canalRanking.send({ embeds: [embedResumo] });
-    guardarRanking({ faccoes: {}, sequencia: { equipa: null, contagem: 0 } });
-}
 
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isMessageComponent() && !interaction.isModalSubmit()) return;
@@ -797,21 +645,6 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     if (interaction.isModalSubmit()) {
-        if (interaction.customId === 'modal_ranking_registar') {
-            await interaction.deferReply({ flags: 64 });
-            const faccao = interaction.fields.getTextInputValue('input_ranking_faccao').trim();
-            const lugar = interaction.fields.getTextInputValue('input_ranking_lugar').trim();
-
-            if (!faccao || !['1', '2', '3'].includes(lugar)) {
-                return interaction.editReply({ content: `${CONFIG.EMOJIS.aviso} O lugar tem de ser \`1\`, \`2\` ou \`3\`.` });
-            }
-
-            const dados = carregarRanking();
-            const extra = registarPodioRanking(dados, faccao, lugar);
-
-            return interaction.editReply({ content: `${CONFIG.EMOJIS.sucesso} Vitória registada para **${faccao}** (${lugar}º Lugar)!${extra}` });
-        }
-
         if (interaction.customId === 'modal_votacao') {
             await interaction.deferReply({ flags: 64 });
             const textoVotacao = interaction.fields.getTextInputValue('input_texto_votacao');
@@ -1124,42 +957,6 @@ client.on('interactionCreate', async (interaction) => {
 
             await interaction.showModal(modal);
             return;
-        }
-
-        if (interaction.customId === 'btn_ranking_registar') {
-            const modal = new ModalBuilder()
-                .setCustomId('modal_ranking_registar')
-                .setTitle('Registar Pódio de Evento');
-
-            const faccaoInput = new TextInputBuilder().setCustomId('input_ranking_faccao').setLabel('Nome da Fação').setStyle(TextInputStyle.Short).setPlaceholder('Ex: Los Santos PD').setRequired(true);
-            const lugarInput = new TextInputBuilder().setCustomId('input_ranking_lugar').setLabel('Lugar (1, 2 ou 3)').setStyle(TextInputStyle.Short).setPlaceholder('1').setRequired(true);
-
-            modal.addComponents(
-                new ActionRowBuilder().addComponents(faccaoInput),
-                new ActionRowBuilder().addComponents(lugarInput)
-            );
-
-            await interaction.showModal(modal);
-            return;
-        }
-
-        if (interaction.customId === 'btn_ranking_fecharsemana') {
-            if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-                return interaction.reply({ content: `${CONFIG.EMOJIS.cancelar} Apenas Staff com permissão de gestão do servidor pode fechar a semana.`, flags: 64 });
-            }
-            await interaction.deferReply({ flags: 64 });
-            const dados = carregarRanking();
-            const canalRanking = interaction.guild.channels.cache.get(CONFIG.CANAL_RANKING_ID) || interaction.channel;
-            await fecharSemanaRanking(dados, canalRanking);
-            return interaction.editReply({ content: `${CONFIG.EMOJIS.sucesso} Semana fechada e resultados publicados em ${canalRanking}!` });
-        }
-
-        if (interaction.customId === 'btn_ranking_reset') {
-            if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-                return interaction.reply({ content: `${CONFIG.EMOJIS.cancelar} Apenas Staff com permissão de gestão do servidor pode resetar o ranking.`, flags: 64 });
-            }
-            guardarRanking({ faccoes: {}, sequencia: { equipa: null, contagem: 0 } });
-            return interaction.reply({ content: `${CONFIG.EMOJIS.sucesso} O ranking foi reiniciado com sucesso!`, flags: 64 });
         }
 
         if (interaction.customId.startsWith('aprovar_agenda_')) {
