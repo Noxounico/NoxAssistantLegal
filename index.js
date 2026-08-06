@@ -84,7 +84,7 @@ const CONFIG = {
     PREFIXO: '!',
     
     CARGOS_DISPONIVEIS: [
-        { id_menu: 'set_coronel', nome: 'Coronel', id: '1534491177720483861', tagNick: 'Cel', desc: 'Solicitar o set de Coronel' },
+        { id_menu: 'set_coronel', nome: 'Coronel', id: '1534491177720483861', tagNick: 'Cor', desc: 'Solicitar o set de Coronel' },
         { id_menu: 'set_tcoronel', nome: 'Tenente-Coronel', id: '1534491178425254039', tagNick: 'TCel', desc: 'Solicitar o set de Tenente-Coronel' },
         { id_menu: 'set_major', nome: 'Major', id: '1534491180002185317', tagNick: 'Maj', desc: 'Solicitar o set de Major' },
         { id_menu: 'set_capitao', nome: 'Capitão', id: '1534491181050888314', tagNick: 'Cap', desc: 'Solicitar o set de Capitão' },
@@ -1316,7 +1316,7 @@ client.on('interactionCreate', async (interaction) => {
                 pedidosPendentes.delete(userId);
 
                 const cargoConfig = CONFIG.CARGOS_DISPONIVEIS.find(c => c.id === role.id);
-                const prefixo = cargoConfig ? cargoConfig.nome : role.name;
+                const prefixo = cargoConfig ? cargoConfig.tagNick : role.name;
 
                 let novoNick = `${prefixo} ⚖️| ${nomeInGame} ${passaporte}`;
                 if (novoNick.length > 32) novoNick = novoNick.substring(0, 32);
