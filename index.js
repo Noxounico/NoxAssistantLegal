@@ -72,6 +72,7 @@ const CONFIG = {
     CANAL_RELATORIOS_ID: '1527002525402661046',
     
     CANAL_LOGS_IDEIAS_ID: '1532811754755850472', 
+    CANAL_LOGS_SETS_ID: '1534491258456637531',
     CANAL_PAINEL_IDEIAS_ID: '1532811239661764739',
     CANAL_AVISOS_ID: '1527001349710024855',
     CANAL_AGENDA_ID: '1533246749249114312',
@@ -84,6 +85,7 @@ const CONFIG = {
     
     CARGOS_DISPONIVEIS: [
         { id_menu: 'set_coronel', nome: 'Coronel', id: '1534491177720483861', tagNick: 'Cel', desc: 'Solicitar o set de Coronel' },
+        { id_menu: 'set_tcoronel', nome: 'Tenente-Coronel', id: '1534491178425254039', tagNick: 'TCel', desc: 'Solicitar o set de Tenente-Coronel' },
         { id_menu: 'set_major', nome: 'Major', id: '1534491180002185317', tagNick: 'Maj', desc: 'Solicitar o set de Major' },
         { id_menu: 'set_capitao', nome: 'Capitão', id: '1534491181050888314', tagNick: 'Cap', desc: 'Solicitar o set de Capitão' },
         { id_menu: 'set_1tenente', nome: '1º Tenente', id: '1534491183865266226', tagNick: '1Ten', desc: 'Solicitar o set de 1º Tenente' },
@@ -1405,6 +1407,17 @@ client.on('interactionCreate', async (interaction) => {
                     .setColor(0x57F287)
                     .setFooter({ text: 'NoxAssistant 2026 ©' });
                 await targetMember.send({ embeds: [embedDM] }).catch(() => {});
+
+                const canalLogsSets = interaction.guild.channels.cache.get(CONFIG.CANAL_LOGS_SETS_ID);
+                if (canalLogsSets) {
+                    const embedLogSet = new EmbedBuilder()
+                        .setTitle(`${CONFIG.EMOJIS.sucesso} Set Aprovado`)
+                        .setDescription(`**Membro:** ${targetMember}\n**Cargo:** ${role}\n**Nome in Game:** ${nomeInGame}\n**Passaporte:** ${passaporte}\n**Aprovado por:** ${interaction.user}\n**Novo nick:** \`${novoNick}\``)
+                        .setColor(0x57F287)
+                        .setTimestamp()
+                        .setFooter({ text: 'NoxAssistant 2026 ©' });
+                    await canalLogsSets.send({ embeds: [embedLogSet] }).catch(() => {});
+                }
             } catch (err) {
                 await interaction.reply({ content: `${CONFIG.EMOJIS.aviso} Erro ao dar o cargo. Verifique a hierarquia de cargos do bot.`, flags: 64 });
             }
