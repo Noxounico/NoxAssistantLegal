@@ -83,12 +83,19 @@ const CONFIG = {
     PREFIXO: '!',
     
     CARGOS_DISPONIVEIS: [
-        { id_menu: 'set_aux', nome: 'Auxiliar', sufixo: 'Aux', tagNick: 'Aux.Cup', emoji: '1520249625276186654', desc: 'Solicitar o set de Auxiliar' },
-        { id_menu: 'set_lid', nome: 'Líder', sufixo: 'Lid', tagNick: 'Lid.Cup', emoji: '1520278427645509813', desc: 'Solicitar o set de Líder' },
-        { id_menu: 'set_sub', nome: 'Sub-Líder', sufixo: 'Sub', tagNick: 'Sub.Cup', emoji: '1520278431034773565', desc: 'Solicitar o set de Sub-Líder' },
-        { id_menu: 'set_gest', nome: 'Gestor', sufixo: 'Gest', tagNick: 'Ges.Cup', emoji: '1520249618380750908', desc: 'Solicitar o set de Gestor' },
-        { id_menu: 'set_elite', nome: 'Elite', sufixo: 'Elite', tagNick: 'Cup.e', emoji: '1520249626731614288', desc: 'Solicitar o set de Elite' },
-        { id_menu: 'set_membro', nome: 'Membro', sufixo: 'Membro', tagNick: 'Cup', emoji: '1520283853116276836', desc: 'Solicitar o set de Membro' }
+        { id_menu: 'set_coronel', nome: 'Coronel', id: '1534491177720483861', tagNick: 'Cel', desc: 'Solicitar o set de Coronel' },
+        { id_menu: 'set_major', nome: 'Major', id: '1534491180002185317', tagNick: 'Maj', desc: 'Solicitar o set de Major' },
+        { id_menu: 'set_capitao', nome: 'Capitão', id: '1534491181050888314', tagNick: 'Cap', desc: 'Solicitar o set de Capitão' },
+        { id_menu: 'set_1tenente', nome: '1º Tenente', id: '1534491183865266226', tagNick: '1Ten', desc: 'Solicitar o set de 1º Tenente' },
+        { id_menu: 'set_2tenente', nome: '2º Tenente', id: '1534491184557199461', tagNick: '2Ten', desc: 'Solicitar o set de 2º Tenente' },
+        { id_menu: 'set_aspirante', nome: 'Aspirante', id: '1534491185396318302', tagNick: 'Asp', desc: 'Solicitar o set de Aspirante' },
+        { id_menu: 'set_1sargento', nome: '1º Sargento', id: '1534491187044552826', tagNick: '1Sgt', desc: 'Solicitar o set de 1º Sargento' },
+        { id_menu: 'set_2sargento', nome: '2º Sargento', id: '1534491187808043101', tagNick: '2Sgt', desc: 'Solicitar o set de 2º Sargento' },
+        { id_menu: 'set_3sargento', nome: '3º Sargento', id: '1534491188487262359', tagNick: '3Sgt', desc: 'Solicitar o set de 3º Sargento' },
+        { id_menu: 'set_cabo', nome: 'Cabo', id: '1534491189296894022', tagNick: 'Cb', desc: 'Solicitar o set de Cabo' },
+        { id_menu: 'set_soldado', nome: 'Soldado', id: '1534491190483750972', tagNick: 'Sd', desc: 'Solicitar o set de Soldado' },
+        { id_menu: 'set_recruta', nome: 'Recruta', id: '1534491191205171381', tagNick: 'Rec', desc: 'Solicitar o set de Recruta' },
+        { id_menu: 'set_core', nome: 'C.O.R.E', id: '1534491196783853568', tagNick: 'CORE', desc: 'Solicitar o set de C.O.R.E' }
     ],
 
     CATEGORIAS_IDEIAS: [
@@ -477,7 +484,6 @@ client.on('messageCreate', async (message) => {
                 .setLabel(`· ${cargo.nome}`)
                 .setDescription(cargo.desc)
                 .setValue(cargo.nome)
-                .setEmoji(cargo.emoji)
         );
         const selectMenu = new StringSelectMenuBuilder()
             .setCustomId('menu_pedir_set')
@@ -673,7 +679,7 @@ client.on('interactionCreate', async (interaction) => {
 
             const nomeCargo = interaction.values[0];
             const cargoConfig = CONFIG.CARGOS_DISPONIVEIS.find(c => c.nome === nomeCargo);
-            const role = interaction.guild.roles.cache.find(r => r.name.endsWith(cargoConfig ? cargoConfig.sufixo : nomeCargo));
+            const role = cargoConfig ? interaction.guild.roles.cache.get(cargoConfig.id) : null;
             
             if (!role) {
                 return interaction.reply({ content: `${CONFIG.EMOJIS.aviso} Não consegui encontrar o cargo **${nomeCargo}** no servidor.`, flags: 64 });
@@ -1378,8 +1384,8 @@ client.on('interactionCreate', async (interaction) => {
                 await targetMember.roles.add(role);
                 pedidosPendentes.delete(userId);
 
-                const cargoConfig = CONFIG.CARGOS_DISPONIVEIS.find(c => role.name.endsWith(c.sufixo));
-                const prefixo = cargoConfig ? cargoConfig.tagNick : 'Cup';
+                const cargoConfig = CONFIG.CARGOS_DISPONIVEIS.find(c => c.id === role.id);
+                const prefixo = cargoConfig ? cargoConfig.tagNick : role.name;
 
                 let novoNick = `${prefixo} 🎭 | ${nomeInGame} ${passaporte}`;
                 if (novoNick.length > 32) novoNick = novoNick.substring(0, 32);
