@@ -73,6 +73,7 @@ const CONFIG = {
     
     CANAL_LOGS_IDEIAS_ID: '1532811754755850472', 
     CANAL_LOGS_SETS_ID: '1534491258456637531',
+    CANAL_RECRUTAMENTO_ID: '1534853087272108152',
     CANAL_PAINEL_IDEIAS_ID: '1532811239661764739',
     CANAL_AVISOS_ID: '1527001349710024855',
     CANAL_AGENDA_ID: '1533246749249114312',
@@ -155,6 +156,7 @@ const CONFIG = {
 const pedidosPendentes = new Set();
 const ideiasPendentes = new Set();
 const relatoriosPendentes = new Set();
+const recrutamentosPendentes = new Set();
 const agendaPendentes = new Set();
 
 async function responderETemporizar(interactionOrMessage, conteudo, ephemeral = true) {
@@ -280,7 +282,7 @@ client.on('messageCreate', async (message) => {
             .setDescription(`Aqui estão todos os comandos (\`${CONFIG.PREFIXO}\`) que podes utilizar:`)
             .addFields(
                 { name: '👤 Geral / Membros', value: '`!comandos` - Mostra esta lista\n`!relatorio` - Abre formulário de relatório\n`!sugestoes` - Envia o painel de sugestões\n`!avisos` - Envia o painel de avisos\n`!agenda` - Envia o painel de agenda\n`!votacoes` - Abre o painel para criar uma votação\n`!hierarquia` - Mostra a hierarquia da organização' },
-                { name: '🛡 Gestão de Cargos & Staff', value: '`!pedirset` - Envia o painel de sets (Admin)\n`!anuncios` - Envia o botão de criar anúncio (Admin)\n`!reuniao` - Envia aviso de reunião por DM (Admin)\n`!clear [1-99]` - Limpa mensagens (Moderadores)' }
+                { name: '🛡 Gestão de Cargos & Staff', value: '`!pedirset` - Envia o painel de sets (Admin)\n`!recrutamento` - Envia o painel de registo de recrutamento (Admin)\n`!anuncios` - Envia o botão de criar anúncio (Admin)\n`!reuniao` - Envia aviso de reunião por DM (Admin)\n`!clear [1-99]` - Limpa mensagens (Moderadores)' }
             )
             .setFooter({ text: 'NoxAssistant 2026 ©' });
 
@@ -477,6 +479,27 @@ client.on('messageCreate', async (message) => {
 
         await message.channel.send(payload);
         return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Painel de anúncios enviado com sucesso!` });
+    }
+
+    if (commandName === 'recrutamento') {
+        if (!message.member.permissions.has(PermissionFlagsBits.Administrator)) {
+            return responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Apenas Administradores podem usar este comando.` });
+        }
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId('btn_abrir_recrutamento')
+                .setLabel('📋 Registar Recrutamento')
+                .setStyle(ButtonStyle.Success)
+        );
+        const payload = v2({
+            content: `## ${CONFIG.EMOJIS.auth} Registo de Recrutamento\nFizeste um recrutamento? Regista aqui para ficar registado no sistema!\n\n> Clica no botão abaixo e preenche os dados do recruta.\n\n-# O registo será enviado para análise da Staff.`,
+            imageUrl: 'https://i.postimg.cc/VNPjBpps/Design-sem-nome-(2).png',
+            footer: '-# NoxAssistant 2026 ©',
+            accentColor: 0x2F3136
+        }, [row]);
+
+        await message.channel.send(payload);
+        return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Painel de recrutamento enviado com sucesso!` });
     }
 
     if (commandName === 'reuniao') {
@@ -785,6 +808,37 @@ client.on('interactionCreate', async (interaction) => {
             return interaction.editReply({ content: `${CONFIG.EMOJIS.sucesso} Relatório enviado com sucesso!` });
         }
 
+        if (interaction.customId === 'modal_recrutamento') {
+            await interaction.deferReply({ flags: 64 });
+            const nomeRecruta = interaction.fields.getTextInputValue('input_nome_recruta');
+            const passaporteRecruta = interaction.fields.getTextInputValue('input_passaporte_recruta');
+            const canalRecrutamento = interaction.guild.channels.cache.get(CONFIG.CANAL_RECRUTAMENTO_ID);
+
+            if (!canalRecrutamento) {
+                return interaction.editReply({ content: `${CONFIG.EMOJIS.cancelar} Erro: O canal de recrutamento não está configurado.` });
+            }
+
+            const dataAtual = new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const recrutamentoId = `${interaction.user.id}_${Date.now()}`;
+            recrutamentosPendentes.add(recrutamentoId);
+
+            const rowRecrutamento = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId(`aprovar_recrutamento_${recrutamentoId}`).setLabel('Aprovar').setEmoji('✅').setStyle(ButtonStyle.Success),
+                new ButtonBuilder().setCustomId(`negar_recrutamento_${recrutamentoId}`).setLabel('Negar').setEmoji('❌').setStyle(ButtonStyle.Danger)
+            );
+
+            const payloadRecrutamento = v2({
+                content: `## 📋 Novo Recrutamento Registado\n**Recrutador:** ${interaction.user} (\`${interaction.user.id}\`)\n**Data / Hora:** \`${dataAtual}\`\n\n📌 **Nome do Recruta:** \`${nomeRecruta}\`\n📌 **Passaporte / ID:** \`${passaporteRecruta}\``,
+                imageUrl: interaction.user.displayAvatarURL({ extension: 'png', size: 128 }),
+                thumbnailRight: true,
+                footer: '-# Sistema de Recrutamento · NoxAssistant 2026 ©',
+                accentColor: 0x2F3136
+            }, [rowRecrutamento]);
+
+            await canalRecrutamento.send(payloadRecrutamento);
+            return interaction.editReply({ content: `${CONFIG.EMOJIS.sucesso} Recrutamento registado com sucesso!` });
+        }
+
         if (interaction.customId.startsWith('modal_ideia_')) {
             await interaction.deferReply({ flags: 64 });
             const tipo = interaction.customId.replace('modal_ideia_', '').replace(/_/g, ' ');
@@ -915,6 +969,23 @@ client.on('interactionCreate', async (interaction) => {
             return;
         }
 
+        if (interaction.customId === 'btn_abrir_recrutamento') {
+            const modal = new ModalBuilder()
+                .setCustomId('modal_recrutamento')
+                .setTitle('Registar Recrutamento');
+
+            const nomeInput = new TextInputBuilder().setCustomId('input_nome_recruta').setLabel('Nome in Game do Recruta').setStyle(TextInputStyle.Short).setRequired(true);
+            const passaporteInput = new TextInputBuilder().setCustomId('input_passaporte_recruta').setLabel('Passaporte / ID do Recruta').setStyle(TextInputStyle.Short).setRequired(true);
+
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(nomeInput),
+                new ActionRowBuilder().addComponents(passaporteInput)
+            );
+
+            await interaction.showModal(modal);
+            return;
+        }
+
         if (interaction.customId === 'btn_abrir_anuncio') {
             const modal = new ModalBuilder()
                 .setCustomId('modal_anuncio')
@@ -1017,6 +1088,62 @@ client.on('interactionCreate', async (interaction) => {
                     .setColor(0xED4245)
                     .setFooter({ text: 'NoxAssistant 2026 ©' });
                 await autorAgenda.send({ embeds: [embedDM] }).catch(() => {});
+            }
+        }
+
+        if (interaction.customId.startsWith('aprovar_recrutamento_')) {
+            if (!membroPodeAprovarIdeias(interaction.member)) {
+                return interaction.reply({ content: `${CONFIG.EMOJIS.cancelar} Apenas membros autorizados podem aprovar recrutamentos.`, flags: 64 });
+            }
+
+            const recrutamentoId = interaction.customId.replace('aprovar_recrutamento_', '');
+            const userId = recrutamentoId.split('_')[0];
+
+            if (!recrutamentosPendentes.has(recrutamentoId)) {
+                return interaction.reply({ content: `${CONFIG.EMOJIS.cancelar} Este recrutamento já foi processado!`, flags: 64 });
+            }
+            recrutamentosPendentes.delete(recrutamentoId);
+
+            await interaction.deferUpdate();
+            const repRec = await interaction.followUp({ content: `${CONFIG.EMOJIS.sucesso} Recrutamento aprovado por ${interaction.user}!` });
+            setTimeout(() => repRec.delete().catch(() => {}), 3000);
+
+            const autorRecrutamento = await interaction.guild.members.fetch(userId).catch(() => null);
+            if (autorRecrutamento) {
+                const embedDM = new EmbedBuilder()
+                    .setTitle(`${CONFIG.EMOJIS.sucesso} Recrutamento Aprovado`)
+                    .setDescription(`Olá ${autorRecrutamento}, o teu recrutamento foi **aprovado** pela Administração!`)
+                    .setColor(0x57F287)
+                    .setFooter({ text: 'NoxAssistant 2026 ©' });
+                await autorRecrutamento.send({ embeds: [embedDM] }).catch(() => {});
+            }
+        }
+
+        if (interaction.customId.startsWith('negar_recrutamento_')) {
+            if (!membroPodeAprovarIdeias(interaction.member)) {
+                return interaction.reply({ content: `${CONFIG.EMOJIS.cancelar} Apenas membros autorizados podem negar recrutamentos.`, flags: 64 });
+            }
+
+            const recrutamentoId = interaction.customId.replace('negar_recrutamento_', '');
+            const userId = recrutamentoId.split('_')[0];
+
+            if (!recrutamentosPendentes.has(recrutamentoId)) {
+                return interaction.reply({ content: `${CONFIG.EMOJIS.cancelar} Este recrutamento já foi processado!`, flags: 64 });
+            }
+            recrutamentosPendentes.delete(recrutamentoId);
+
+            await interaction.deferUpdate();
+            const repRecNeg = await interaction.followUp({ content: `${CONFIG.EMOJIS.aviso} Recrutamento negado por ${interaction.user}.` });
+            setTimeout(() => repRecNeg.delete().catch(() => {}), 3000);
+
+            const autorRecrutamento = await interaction.guild.members.fetch(userId).catch(() => null);
+            if (autorRecrutamento) {
+                const embedDM = new EmbedBuilder()
+                    .setTitle(`${CONFIG.EMOJIS.cancelar} Recrutamento Negado`)
+                    .setDescription(`Olá ${autorRecrutamento}, o teu recrutamento foi **negado** pela Administração desta vez.`)
+                    .setColor(0xED4245)
+                    .setFooter({ text: 'NoxAssistant 2026 ©' });
+                await autorRecrutamento.send({ embeds: [embedDM] }).catch(() => {});
             }
         }
 
@@ -1189,7 +1316,7 @@ client.on('interactionCreate', async (interaction) => {
                 pedidosPendentes.delete(userId);
 
                 const cargoConfig = CONFIG.CARGOS_DISPONIVEIS.find(c => c.id === role.id);
-                const prefixo = cargoConfig ? cargoConfig.tagNick : role.name;
+                const prefixo = cargoConfig ? cargoConfig.nome : role.name;
 
                 let novoNick = `${prefixo} ⚖️| ${nomeInGame} ${passaporte}`;
                 if (novoNick.length > 32) novoNick = novoNick.substring(0, 32);
