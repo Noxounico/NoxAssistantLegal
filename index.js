@@ -22,16 +22,23 @@ const fs = require('fs');
 const path = require('path');
 
 // ---- Proteção contra instâncias duplicadas do bot ----
+// Evita que o mesmo bot fique "duplicado" no Discord quando corres
+// `node index.js` mais do que uma vez (ex: 2 terminais abertos, ou
+// esqueceste-te de fechar a janela anterior).
 const LOCK_FILE = path.join(__dirname, 'bot.lock');
 
 function verificarInstanciaUnica() {
     if (fs.existsSync(LOCK_FILE)) {
         const pidAntigo = parseInt(fs.readFileSync(LOCK_FILE, 'utf8'), 10);
         try {
+            // process.kill(pid, 0) não mata nada, só testa se o processo existe
             process.kill(pidAntigo, 0);
             console.error(`❌ Já existe uma instância deste bot a correr (PID ${pidAntigo}).`);
+            console.error(`   Fecha essa janela/processo antes de abrir uma nova, ou apaga "bot.lock" se tiveres a certeza que não há nenhum a correr.`);
             process.exit(1);
-        } catch (e) {}
+        } catch (e) {
+            // O PID guardado já não existe (bot.lock ficou "preso" de uma vez anterior) -> pode continuar
+        }
     }
     fs.writeFileSync(LOCK_FILE, String(process.pid), 'utf8');
 }
@@ -63,11 +70,15 @@ const client = new Client({
 const CONFIG = {
     CANAL_LOGS_ID: '1532011317882519592', 
     CANAL_RELATORIOS_ID: '1527002525402661046',
+    
     CANAL_LOGS_IDEIAS_ID: '1532811754755850472', 
     CANAL_PAINEL_IDEIAS_ID: '1532811239661764739',
     CANAL_AVISOS_ID: '1527001349710024855',
     CANAL_AGENDA_ID: '1533246749249114312',
+    CANAL_ANUNCIOS_ID: '1527000712779927612',
+
     CANAL_VOTACOES_ID: '1527002314513186866',
+    CANAL_RANKING_ID: '1527002450853367808',
     CARGO_IDEIAS_ID: '1532811905071321218', 
     PREFIXO: '!',
     
@@ -88,8 +99,7 @@ const CONFIG = {
 
     CATEGORIAS_AVISOS: [
         { id_menu: 'aviso_geral', nome: 'Aviso Geral', desc: 'Comunicado importante para todos' },
-        { id_menu: 'aviso_urgente', nome: 'Aviso Urgente', desc: 'Alerta prioritário para a comunidade' },
-        { id_menu: 'aviso_anuncio', nome: 'Anúncio', desc: 'Anúncio oficial para toda a comunidade' }
+        { id_menu: 'aviso_urgente', nome: 'Aviso Urgente', desc: 'Alerta prioritário para a comunidade' }
     ],
 
     CATEGORIAS_AGENDA: [
@@ -97,14 +107,22 @@ const CONFIG = {
         { id_menu: 'agenda_evento', nome: 'Evento Programado', desc: 'Agendar data e hora para evento' }
     ],
 
+    // ---- Configuração do comando !hierarquia ----
+    // Para cada categoria, "cargos" é uma lista de IDs de cargo (roles) do Discord.
+    // Todos os membros que tiverem QUALQUER um desses cargos aparecem listados nessa secção.
+    // ⚠️ TENS DE SUBSTITUIR os valores "COLOCA_AQUI_..." pelos IDs reais dos teus cargos!
+    // Como obter o ID de um cargo: Definições do Discord > Avançado > ativar "Modo de Programador",
+    // depois vai a Definições do Servidor > Cargos, clica com o botão direito no cargo > "Copiar ID do Cargo".
     CATEGORIAS_HIERARQUIA: [
-        { titulo: 'HIERARQUIA CUPULA', cargos: ['1527000274038947890'], grupo: 'gestao' },
-        { titulo: 'ADM', cargos: ['1527000248982175764'], grupo: 'gestao' },
-        { titulo: 'AUX', cargos: ['1527000221089796236'], grupo: 'gestao' },
-        { titulo: 'LID', cargos: ['1527001475652522267'], grupo: 'gestao' },
-        { titulo: 'SUB', cargos: ['1527000194548502632'], grupo: 'gestao' },
-        { titulo: 'MEMBRO-E', cargos: ['1527000169537605703'], grupo: 'membros' },
-        { titulo: 'MEMBRO', cargos: ['1527000128953516052'], grupo: 'membros' }
+        { titulo: 'HIERARQUIA', cargos: ['1527000274038947890'] },
+        { titulo: 'ADM', cargos: ['1527000248982175764'] },
+        { titulo: 'AUX', cargos: ['1527000221089796236'] },
+        { titulo: 'LID', cargos: ['1527001475652522267'] },
+        { titulo: 'SUB', cargos: ['1527000194548502632'] },
+        { titulo: 'ELITE', cargos: ['1527000169537605703'] },
+        { titulo: 'JUNIOR', cargos: ['COLOCA_AQUI_O_ID_DO_CARGO_JUNIOR'] },
+        { titulo: 'TESTE', cargos: ['COLOCA_AQUI_O_ID_DO_CARGO_TESTE'] },
+        { titulo: 'MEMBRO', cargos: ['1527000128953516052'] }
     ],
 
     EMOJIS: {
@@ -113,10 +131,11 @@ const CONFIG = {
         info: '<:info:1520249612542279780>',
         cancelar: '<:cancel:1520249621589524571>',
         ticket: '<:ticket:1520278432687325195>',
+        // ID de emoji personalizado atualizado (válido, enviado pelo utilizador)
         auth: '<:272410anonymous:1533449386594664509>',
+        // Emojis decorativos usados antes e depois de cada nome no !hierarquia.
         hierarquiaEsq: '<:272410anonymous:1533449386594664509>',
-        hierarquiaDir: '<:272410anonymous:1533449386594664509>',
-        coroa: '👑'
+        hierarquiaDir: '<:272410anonymous:1533449386594664509>'
     }
 };
 
@@ -124,7 +143,72 @@ const pedidosPendentes = new Set();
 const ideiasPendentes = new Set();
 const relatoriosPendentes = new Set();
 const agendaPendentes = new Set();
+const RANKING_FILE = path.join(__dirname, 'ranking_data.json');
 
+function carregarRanking() {
+    try {
+        if (fs.existsSync(RANKING_FILE)) {
+            const dados = JSON.parse(fs.readFileSync(RANKING_FILE, 'utf8'));
+            if (!dados.faccoes) dados.faccoes = {};
+            if (!dados.sequencia) dados.sequencia = { equipa: null, contagem: 0 };
+            return dados;
+        }
+    } catch (e) {
+        console.error('Erro ao carregar ranking:', e);
+    }
+    return { faccoes: {}, sequencia: { equipa: null, contagem: 0 } };
+}
+
+function guardarRanking(data) {
+    try {
+        fs.writeFileSync(RANKING_FILE, JSON.stringify(data, null, 2), 'utf8');
+    } catch (e) {
+        console.error('Erro ao guardar ranking:', e);
+    }
+}
+
+// Regista um pódio (1º, 2º ou 3º lugar) para uma fação e atualiza a sequência global
+// de vitórias consecutivas em 1º lugar (só é quebrada quando OUTRA fação vence o 1º lugar).
+// Devolve uma frase extra (ex: "🔥 vai na 3ª vitória consecutiva!") ou string vazia.
+function registarPodioRanking(dados, faccao, lugar) {
+    if (!dados.faccoes[faccao]) {
+        dados.faccoes[faccao] = { "1": 0, "2": 0, "3": 0 };
+    }
+    dados.faccoes[faccao][lugar] += 1;
+
+    let extra = '';
+    if (lugar === '1') {
+        if (dados.sequencia.equipa === faccao) {
+            dados.sequencia.contagem += 1;
+        } else {
+            dados.sequencia.equipa = faccao;
+            dados.sequencia.contagem = 1;
+        }
+        if (dados.sequencia.contagem > 1) {
+            extra = ` 🔥 **${faccao}** vai na **${dados.sequencia.contagem}ª vitória consecutiva**!`;
+        }
+    }
+
+    guardarRanking(dados);
+    return extra;
+}
+
+async function responderETemporizar(interactionOrMessage, conteudo, ephemeral = true) {
+    if (interactionOrMessage.replied || interactionOrMessage.deferred) {
+        const msg = await interactionOrMessage.followUp({ content: conteudo, ephemeral });
+        setTimeout(() => msg.delete().catch(() => {}), 3000);
+    } else if (interactionOrMessage.isChatInputCommand || interactionOrMessage.isButton || interactionOrMessage.isStringSelectMenu) {
+        await interactionOrMessage.reply({ content: conteudo, ephemeral });
+        setTimeout(() => interactionOrMessage.deleteReply().catch(() => {}), 3000);
+    } else {
+        const rep = await interactionOrMessage.channel.send(conteudo);
+        setTimeout(() => rep.delete().catch(() => {}), 3000);
+    }
+}
+
+// Os comandos deixaram de ser de barra (/) — agora são todos por prefixo (!),
+// tratados no listener client.on('messageCreate', ...) mais abaixo.
+// IDs dos cargos que podem aprovar/rejeitar Ideias / Ações:
 const CARGOS_APROVAR_IDEIAS = [
     '1527000274038947890',
     '1527000248982175764',
@@ -138,8 +222,10 @@ function membroPodeAprovarIdeias(member) {
 client.once('clientReady', async () => {
     console.log(`🤖 ${client.user.tag} está online e pronto a funcionar com comandos por prefixo (${CONFIG.PREFIXO})!`);
 
+    // Apaga quaisquer comandos de barra (/) antigos que possam ter ficado registados
+    // no Discord de testes anteriores, para não aparecerem duplicados nem confundirem.
     try {
-        const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN || process.env.TOKEN);
+        const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
         await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
         console.log('🗑️ Comandos de barra (/) antigos removidos.');
     } catch (error) {
@@ -213,8 +299,10 @@ client.on('messageCreate', async (message) => {
     const args = message.content.slice(CONFIG.PREFIXO.length).trim().split(/\s+/);
     const commandName = args.shift().toLowerCase();
 
+    // Apaga a mensagem do comando (ex: "!ideias") do canal, para não ficar lá visível
     message.delete().catch(() => {});
 
+    // Função auxiliar para responder e apagar automaticamente após 5 segundos
     async function responderEApagar(payloadOptions) {
         const rep = await message.channel.send(payloadOptions);
         setTimeout(() => rep.delete().catch(() => {}), 3000);
@@ -228,7 +316,7 @@ client.on('messageCreate', async (message) => {
             .setDescription(`Aqui estão todos os comandos (\`${CONFIG.PREFIXO}\`) que podes utilizar:`)
             .addFields(
                 { name: '👤 Geral / Membros', value: '`!comandos` - Mostra esta lista\n`!relatorio` - Abre formulário de relatório\n`!ideias` - Envia o painel de ideias\n`!avisos` - Envia o painel de avisos\n`!agenda` - Envia o painel de agenda\n`!votacoes` - Abre o painel para criar uma votação\n`!hierarquia` - Mostra a hierarquia da organização' },
-                { name: '🛡️ Gestão de Cargos & Staff', value: '`!pedirset` - Envia o painel de sets (Admin)\n`!reuniao` - Envia aviso de reunião por DM (Admin)\n`!clear [1-99]` - Limpa mensagens (Moderadores)' }
+                { name: '🛡️ Gestão de Cargos & Staff', value: '`!pedirset` - Envia o painel de sets (Admin)\n`!anuncios` - Envia o botão de criar anúncio (Admin)\n`!reuniao` - Envia aviso de reunião por DM (Admin)\n`!ranking` - Envia o painel de ranking (botões: registar pódio, fechar semana, resetar)\n`!clear [1-99]` - Limpa mensagens (Moderadores)' }
             )
             .setFooter({ text: 'NoxAssistant 2026 ©' });
 
@@ -277,17 +365,11 @@ client.on('messageCreate', async (message) => {
     }
 
     if (commandName === 'hierarquia') {
-        await message.guild.members.fetch().catch(() => {});
-
-        const CANAL_HIERARQUIA_ID = '1531223510305996930';
-        const canalHierarquia = message.guild.channels.cache.get(CANAL_HIERARQUIA_ID) || message.channel;
+        await message.guild.members.fetch().catch(() => {}); // garante que a cache de membros está atualizada
 
         let conteudo = '';
-        const membrosGestao = new Set();
-        const membrosMembros = new Set();
-
         for (const categoria of CONFIG.CATEGORIAS_HIERARQUIA) {
-            conteudo += `${CONFIG.EMOJIS.coroa} **${categoria.titulo}**\n`;
+            conteudo += `**${categoria.titulo}**\n`;
 
             const membrosCategoria = message.guild.members.cache.filter(m =>
                 categoria.cargos.some(cargoId => m.roles.cache.has(cargoId))
@@ -298,27 +380,15 @@ client.on('messageCreate', async (message) => {
             } else {
                 membrosCategoria.forEach(membro => {
                     conteudo += `${CONFIG.EMOJIS.hierarquiaEsq} ${membro} ${CONFIG.EMOJIS.hierarquiaDir}\n`;
-                    if (categoria.grupo === 'membros') {
-                        membrosMembros.add(membro.id);
-                    } else {
-                        membrosGestao.add(membro.id);
-                    }
                 });
             }
             conteudo += '\n';
         }
 
-        const totalGestao = membrosGestao.size;
-        const totalMembros = membrosMembros.size;
-        const totalGeral = totalGestao + totalMembros;
-
-        conteudo += `${CONFIG.EMOJIS.coroa} Gestão.CUP | (${totalGestao})\n`;
-        conteudo += `${CONFIG.EMOJIS.coroa} Membros | (${totalMembros})\n`;
-        conteudo += `${CONFIG.EMOJIS.coroa} **Total (${totalGeral})**\n`;
-
+        // Discord limita mensagens a 2000 caracteres — se a hierarquia for grande, divide em várias mensagens.
         const blocos = conteudo.trim().match(/[\s\S]{1,1900}(\n|$)/g) || [conteudo.trim()];
         for (const bloco of blocos) {
-            await canalHierarquia.send({ content: bloco.trim() });
+            await message.channel.send({ content: bloco.trim() });
         }
         return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Hierarquia enviada com sucesso!` });
     }
@@ -425,6 +495,27 @@ client.on('messageCreate', async (message) => {
         return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Painel de sets enviado com sucesso!` });
     }
 
+    if (commandName === 'anuncios') {
+        if (!message.member.permissions.has(PermissionFlagsBits.Administrator)) {
+            return responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Apenas Administradores podem usar este comando.` });
+        }
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId('btn_abrir_anuncio')
+                .setLabel('📢 Criar Novo Anúncio')
+                .setStyle(ButtonStyle.Success)
+        );
+        const payload = v2({
+            content: `## 📢 Painel de Anúncios\nPrecisas de comunicar algo importante a toda a comunidade?\n\n> Clica no botão abaixo para abrires o formulário e criares um novo anúncio oficial.\n\n-# O anúncio será publicado automaticamente no canal correspondente.`,
+            imageUrl: 'https://i.postimg.cc/VNPjBpps/Design-sem-nome-(2).png',
+            footer: '-# NoxAssistant 2026 ©',
+            accentColor: 0xE67E22
+        }, [row]);
+
+        await message.channel.send(payload);
+        return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Painel de anúncios enviado com sucesso!` });
+    }
+
     if (commandName === 'reuniao') {
         if (!message.member.permissions.has(PermissionFlagsBits.Administrator)) {
             return responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Apenas Administradores podem usar este comando.` });
@@ -467,7 +558,109 @@ client.on('messageCreate', async (message) => {
         await message.channel.send(payload);
         return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Painel de votações enviado com sucesso!` });
     }
+
+    if (commandName === 'ranking') {
+        const subCmd = (args[0] || 'ver').toLowerCase();
+        let dados = carregarRanking();
+        const canalRanking = message.guild.channels.cache.get(CONFIG.CANAL_RANKING_ID) || message.channel;
+
+        if (subCmd === 'registar') {
+            const lugar = args[args.length - 1];
+            const faccao = args.slice(1, -1).join(' ');
+
+            if (!faccao || !['1', '2', '3'].includes(lugar)) {
+                return responderEApagar({ content: `${CONFIG.EMOJIS.aviso} Usa \`!ranking registar <nome da facção> <1|2|3>\`, ex: \`!ranking registar Los Santos PD 1\`.` });
+            }
+
+            const extra = registarPodioRanking(dados, faccao, lugar);
+            return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Vitória registada para **${faccao}** (${lugar}º Lugar)!${extra}` });
+        }
+        else if (subCmd === 'reset') {
+            guardarRanking({ faccoes: {}, sequencia: { equipa: null, contagem: 0 } });
+            return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} O ranking foi reiniciado com sucesso!` });
+        }
+        else if (subCmd === 'fecharsemana') {
+            await fecharSemanaRanking(dados, canalRanking);
+            return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Semana fechada e resultados publicados com sucesso!` });
+        }
+        else {
+            const payload = construirPainelRanking(dados);
+            await canalRanking.send(payload);
+            return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Painel de ranking gerado com sucesso!` });
+        }
+    }
 });
+
+// Monta o embed + botões do painel de ranking (usado pelo !ranking e ao clicar em "Atualizar Painel")
+function construirPainelRanking(dados) {
+    let corpo = 'Acompanha o registo de vitórias e pódios de cada fação em tempo real:\n\n';
+    const faccoesEntries = Object.entries(dados.faccoes);
+
+    if (faccoesEntries.length === 0) {
+        corpo += '> *Ainda não existem registos de eventos esta semana.*';
+    } else {
+        for (const [faccao, scores] of faccoesEntries) {
+            const totalPrimeiros = scores["1"] || 0;
+            const totalSegundos = scores["2"] || 0;
+            const totalTerceiros = scores["3"] || 0;
+            const emSequencia = dados.sequencia.equipa === faccao ? dados.sequencia.contagem : 0;
+
+            corpo += `🛡️ **${faccao}**\n`;
+            if (emSequencia > 1) {
+                corpo += `> 🔥 **Esta fação venceu ${emSequencia}x consecutivas!**\n`;
+            }
+            const textoGanho = totalPrimeiros === 1 ? 'Ganhou 1 Vez' : `Ganhou ${totalPrimeiros} Vezes`;
+            corpo += `> 🥇 **1º Lugar:** \`${totalPrimeiros}\` (${textoGanho})\n`;
+            corpo += `> 🥈 **2º Lugar:** \`${totalSegundos}\`\n`;
+            corpo += `> 🥉 **3º Lugar:** \`${totalTerceiros}\`\n\n`;
+        }
+    }
+
+    const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('btn_ranking_registar').setLabel('Registar Pódio').setEmoji('🏆').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('btn_ranking_fecharsemana').setLabel('Fechar Semana').setEmoji('📅').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('btn_ranking_reset').setLabel('Resetar').setEmoji('♻️').setStyle(ButtonStyle.Danger)
+    );
+
+    return v2({
+        content: `## 📊 Painel de Ranking de Eventos & Vitórias\n${corpo}`,
+        imageUrl: 'https://i.postimg.cc/VNPjBpps/Design-sem-nome-(2).png',
+        footer: '-# NoxAssistant 2026 ©',
+        accentColor: 0x3498DB
+    }, [row]);
+}
+
+// Publica o resumo semanal no canal de ranking e reinicia os dados
+async function fecharSemanaRanking(dados, canalRanking) {
+    let faccoesArr = Object.keys(dados.faccoes).map(f => ({
+        nome: f,
+        primOrd: dados.faccoes[f]["1"] || 0,
+        seguOrd: dados.faccoes[f]["2"] || 0,
+        tercOrd: dados.faccoes[f]["3"] || 0,
+        totalPontos: ((dados.faccoes[f]["1"] || 0) * 3) + ((dados.faccoes[f]["2"] || 0) * 2) + ((dados.faccoes[f]["3"] || 0) * 1)
+    }));
+
+    faccoesArr.sort((a, b) => b.totalPontos - a.totalPontos || b.primOrd - a.primOrd);
+
+    const v1 = faccoesArr.find(f => f.primOrd > 0) || faccoesArr[0] || { nome: 'Nenhuma', primOrd: 0 };
+    const v2Fac = faccoesArr.filter(f => f.nome !== v1.nome).sort((a, b) => b.seguOrd - a.seguOrd)[0] || { nome: 'Nenhuma', seguOrd: 0 };
+    const v3Fac = faccoesArr.filter(f => f.nome !== v1.nome && f.nome !== v2Fac.nome).sort((a, b) => b.tercOrd - a.tercOrd)[0] || { nome: 'Nenhuma', tercOrd: 0 };
+
+    const embedResumo = new EmbedBuilder()
+        .setTitle('🏆 Resumo Semanal do Ranking de Eventos')
+        .setColor(0xF1C40F)
+        .setDescription('Chegamos ao fim de mais uma semana de competição intensa! Aqui estão os resultados oficiais:')
+        .addFields(
+            { name: '🥇 1º Lugar Geral', value: `**${v1.nome}** conquistou mais primeiros lugares (${v1.primOrd || 0} vitórias em 1º lugar)!`, inline: false },
+            { name: '🥈 2º Lugar Geral', value: `**${v2Fac.nome}** destacou-se com consistência em 2º lugar (${v2Fac.seguOrd || 0} vezes)!`, inline: false },
+            { name: '🥉 3º Lugar Geral', value: `**${v3Fac.nome}** fechou o pódio garantindo o 3º lugar (${v3Fac.tercOrd || 0} vezes)!`, inline: false }
+        )
+        .setTimestamp()
+        .setFooter({ text: 'NoxAssistant 2026 © - Fecho Semanal' });
+
+    await canalRanking.send({ embeds: [embedResumo] });
+    guardarRanking({ faccoes: {}, sequencia: { equipa: null, contagem: 0 } });
+}
 
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isMessageComponent() && !interaction.isModalSubmit()) return;
@@ -596,6 +789,21 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     if (interaction.isModalSubmit()) {
+        if (interaction.customId === 'modal_ranking_registar') {
+            await interaction.deferReply({ flags: 64 });
+            const faccao = interaction.fields.getTextInputValue('input_ranking_faccao').trim();
+            const lugar = interaction.fields.getTextInputValue('input_ranking_lugar').trim();
+
+            if (!faccao || !['1', '2', '3'].includes(lugar)) {
+                return interaction.editReply({ content: `${CONFIG.EMOJIS.aviso} O lugar tem de ser \`1\`, \`2\` ou \`3\`.` });
+            }
+
+            const dados = carregarRanking();
+            const extra = registarPodioRanking(dados, faccao, lugar);
+
+            return interaction.editReply({ content: `${CONFIG.EMOJIS.sucesso} Vitória registada para **${faccao}** (${lugar}º Lugar)!${extra}` });
+        }
+
         if (interaction.customId === 'modal_votacao') {
             await interaction.deferReply({ flags: 64 });
             const textoVotacao = interaction.fields.getTextInputValue('input_texto_votacao');
@@ -612,10 +820,35 @@ client.on('interactionCreate', async (interaction) => {
                 .setFooter({ text: `Votação iniciada por ${interaction.user.tag}` });
 
             const votacaoMsg = await canalVotacoes.send({ embeds: [embed] });
-            await votacaoMsg.react('✅');
-            await votacaoMsg.react('❌');
+            await votacaoMsg.react('👍');
+            await votacaoMsg.react('👎');
 
             return interaction.editReply({ content: `${CONFIG.EMOJIS.sucesso} Votação enviada com sucesso para ${canalVotacoes}!` });
+        }
+
+        if (interaction.customId === 'modal_anuncio') {
+            await interaction.deferReply({ flags: 64 });
+            const tituloAnuncio = interaction.fields.getTextInputValue('input_titulo_anuncio');
+            const mensagemAnuncio = interaction.fields.getTextInputValue('input_msg_anuncio');
+            const canalAnuncios = interaction.guild.channels.cache.get(CONFIG.CANAL_ANUNCIOS_ID);
+
+            if (!canalAnuncios) {
+                return interaction.editReply({ content: `${CONFIG.EMOJIS.cancelar} O canal de anúncios configurado não foi encontrado.` });
+            }
+
+            const embedAnuncio = new EmbedBuilder()
+                .setTitle(`📢 ${tituloAnuncio}`)
+                .setDescription(mensagemAnuncio)
+                .setColor(0xF1C40F)
+                .setTimestamp()
+                .setFooter({ text: `Anúncio publicado por ${interaction.user.tag} · NoxAssistant 2026 ©` });
+
+            await canalAnuncios.send({ 
+                content: '@everyone', 
+                embeds: [embedAnuncio] 
+            });
+            
+            return await interaction.editReply({ content: `${CONFIG.EMOJIS.sucesso} Anúncio enviado com sucesso para ${canalAnuncios}!` });
         }
 
         if (interaction.customId.startsWith('modal_aviso_')) {
@@ -669,7 +902,7 @@ client.on('interactionCreate', async (interaction) => {
                 new ButtonBuilder().setCustomId(`negar_agenda_${agendaId}`).setLabel('Negar').setEmoji('❌').setStyle(ButtonStyle.Danger)
             );
 
-            await canalAgenda.send({ embeds: [embedAgenda], components: [rowAgenda] });
+            const agendaMsg = await canalAgenda.send({ embeds: [embedAgenda], components: [rowAgenda] });
 
             return await interaction.editReply({ content: `${CONFIG.EMOJIS.sucesso} Agendamento publicado com sucesso em ${canalAgenda}!` });
         }
@@ -836,6 +1069,23 @@ client.on('interactionCreate', async (interaction) => {
             return;
         }
 
+        if (interaction.customId === 'btn_abrir_anuncio') {
+            const modal = new ModalBuilder()
+                .setCustomId('modal_anuncio')
+                .setTitle('Criar Anúncio Oficial');
+
+            const tituloInput = new TextInputBuilder().setCustomId('input_titulo_anuncio').setLabel('Título do Anúncio').setStyle(TextInputStyle.Short).setRequired(true);
+            const msgInput = new TextInputBuilder().setCustomId('input_msg_anuncio').setLabel('Mensagem do Anúncio').setStyle(TextInputStyle.Paragraph).setRequired(true);
+
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(tituloInput),
+                new ActionRowBuilder().addComponents(msgInput)
+            );
+
+            await interaction.showModal(modal);
+            return;
+        }
+
         if (interaction.customId === 'btn_abrir_reuniao') {
             const modal = new ModalBuilder()
                 .setCustomId('modal_reuniao')
@@ -866,6 +1116,42 @@ client.on('interactionCreate', async (interaction) => {
 
             await interaction.showModal(modal);
             return;
+        }
+
+        if (interaction.customId === 'btn_ranking_registar') {
+            const modal = new ModalBuilder()
+                .setCustomId('modal_ranking_registar')
+                .setTitle('Registar Pódio de Evento');
+
+            const faccaoInput = new TextInputBuilder().setCustomId('input_ranking_faccao').setLabel('Nome da Fação').setStyle(TextInputStyle.Short).setPlaceholder('Ex: Los Santos PD').setRequired(true);
+            const lugarInput = new TextInputBuilder().setCustomId('input_ranking_lugar').setLabel('Lugar (1, 2 ou 3)').setStyle(TextInputStyle.Short).setPlaceholder('1').setRequired(true);
+
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(faccaoInput),
+                new ActionRowBuilder().addComponents(lugarInput)
+            );
+
+            await interaction.showModal(modal);
+            return;
+        }
+
+        if (interaction.customId === 'btn_ranking_fecharsemana') {
+            if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+                return interaction.reply({ content: `${CONFIG.EMOJIS.cancelar} Apenas Staff com permissão de gestão do servidor pode fechar a semana.`, flags: 64 });
+            }
+            await interaction.deferReply({ flags: 64 });
+            const dados = carregarRanking();
+            const canalRanking = interaction.guild.channels.cache.get(CONFIG.CANAL_RANKING_ID) || interaction.channel;
+            await fecharSemanaRanking(dados, canalRanking);
+            return interaction.editReply({ content: `${CONFIG.EMOJIS.sucesso} Semana fechada e resultados publicados em ${canalRanking}!` });
+        }
+
+        if (interaction.customId === 'btn_ranking_reset') {
+            if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+                return interaction.reply({ content: `${CONFIG.EMOJIS.cancelar} Apenas Staff com permissão de gestão do servidor pode resetar o ranking.`, flags: 64 });
+            }
+            guardarRanking({ faccoes: {}, sequencia: { equipa: null, contagem: 0 } });
+            return interaction.reply({ content: `${CONFIG.EMOJIS.sucesso} O ranking foi reiniciado com sucesso!`, flags: 64 });
         }
 
         if (interaction.customId.startsWith('aprovar_agenda_')) {
@@ -1109,7 +1395,7 @@ client.on('interactionCreate', async (interaction) => {
 
                 const embedDM = new EmbedBuilder()
                     .setTitle(`${CONFIG.EMOJIS.sucesso} Solicitação Aprovada!`)
-                    .setDescription(`Olá ${targetName}, a tua solicitação para o cargo **${role.name}** foi **aprovada**! Já recebeste o cargo e o teu nome foi atualizado para **${novoNick}**.`)
+                    .setDescription(`Olá ${targetMember}, a tua solicitação para o cargo **${role.name}** foi **aprovada**! Já recebeste o cargo e o teu nome foi atualizado para **${novoNick}**.`)
                     .setColor(0x57F287)
                     .setFooter({ text: 'NoxAssistant 2026 ©' });
                 await targetMember.send({ embeds: [embedDM] }).catch(() => {});
@@ -1146,5 +1432,4 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
-// Inicialização compatível tanto com process.env.TOKEN como process.env.DISCORD_TOKEN
 client.login(process.env.TOKEN);
