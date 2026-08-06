@@ -74,6 +74,7 @@ const CONFIG = {
     CANAL_LOGS_IDEIAS_ID: '1532811754755850472', 
     CANAL_LOGS_SETS_ID: '1534491258456637531',
     CANAL_RECRUTAMENTO_ID: '1534853087272108152',
+    CARGO_APROVAR_RECRUTAMENTO_ID: '1534491173492625479',
     CANAL_PAINEL_IDEIAS_ID: '1532811239661764739',
     CANAL_AVISOS_ID: '1527001349710024855',
     CANAL_AGENDA_ID: '1533246749249114312',
@@ -183,6 +184,14 @@ const CARGOS_APROVAR_IDEIAS = [
 
 function membroPodeAprovarIdeias(member) {
     return member.roles.cache.some(role => CARGOS_APROVAR_IDEIAS.includes(role.id));
+}
+
+// Só quem tem o cargo CARGO_APROVAR_RECRUTAMENTO_ID, ou qualquer cargo posicionado
+// acima dele na hierarquia de cargos do servidor (alta patente), pode aprovar/negar recrutamentos.
+function membroPodeAprovarRecrutamento(member) {
+    const cargoBase = member.guild.roles.cache.get(CONFIG.CARGO_APROVAR_RECRUTAMENTO_ID);
+    if (!cargoBase) return false;
+    return member.roles.cache.some(role => role.position >= cargoBase.position);
 }
 
 client.once('clientReady', async () => {
@@ -1092,7 +1101,7 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         if (interaction.customId.startsWith('aprovar_recrutamento_')) {
-            if (!membroPodeAprovarIdeias(interaction.member)) {
+            if (!membroPodeAprovarRecrutamento(interaction.member)) {
                 return interaction.reply({ content: `${CONFIG.EMOJIS.cancelar} Apenas membros autorizados podem aprovar recrutamentos.`, flags: 64 });
             }
 
@@ -1120,7 +1129,7 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         if (interaction.customId.startsWith('negar_recrutamento_')) {
-            if (!membroPodeAprovarIdeias(interaction.member)) {
+            if (!membroPodeAprovarRecrutamento(interaction.member)) {
                 return interaction.reply({ content: `${CONFIG.EMOJIS.cancelar} Apenas membros autorizados podem negar recrutamentos.`, flags: 64 });
             }
 
