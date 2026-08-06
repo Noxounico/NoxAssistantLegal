@@ -135,8 +135,7 @@ const CONFIG = {
         { titulo: '3º SARGENTO', cargos: ['1534491188487262359'] },
         { titulo: 'CABO', cargos: ['1534491189296894022'] },
         { titulo: 'SOLDADO', cargos: ['1534491190483750972'] },
-        { titulo: 'RECRUTA', cargos: ['1534491191205171381'] },
-        { titulo: 'C.O.R.E', cargos: ['1534491196783853568'] }
+        { titulo: 'RECRUTA', cargos: ['1534491191205171381'] }
     ],
 
     EMOJIS: {
@@ -148,8 +147,8 @@ const CONFIG = {
         // ID de emoji personalizado atualizado (válido, enviado pelo utilizador)
         auth: '<:272410anonymous:1533449386594664509>',
         // Emojis decorativos usados antes e depois de cada nome no !hierarquia.
-        hierarquiaEsq: '<:272410anonymous:1533449386594664509>',
-        hierarquiaDir: '<:272410anonymous:1533449386594664509>'
+        hierarquiaEsq: '<:AK47:1534850499948449872>',
+        hierarquiaDir: '<:AK47:1534850499948449872>'
     }
 };
 
@@ -332,7 +331,7 @@ client.on('messageCreate', async (message) => {
     if (commandName === 'hierarquia') {
         await message.guild.members.fetch().catch(() => {}); // garante que a cache de membros está atualizada
 
-        let conteudo = '';
+        let conteudo = '# HIERARQUIA\n\n';
         for (const categoria of CONFIG.CATEGORIAS_HIERARQUIA) {
             conteudo += `**${categoria.titulo}**\n`;
 
