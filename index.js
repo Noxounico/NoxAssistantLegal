@@ -1191,7 +1191,7 @@ client.on('interactionCreate', async (interaction) => {
                 const cargoConfig = CONFIG.CARGOS_DISPONIVEIS.find(c => c.id === role.id);
                 const prefixo = cargoConfig ? cargoConfig.tagNick : role.name;
 
-                let novoNick = `${prefixo} 🎭 | ${nomeInGame} ${passaporte}`;
+                let novoNick = `${prefixo} ⚖️| ${nomeInGame} ${passaporte}`;
                 if (novoNick.length > 32) novoNick = novoNick.substring(0, 32);
 
                 await targetMember.setNickname(novoNick).catch(() => {});
