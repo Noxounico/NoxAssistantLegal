@@ -296,7 +296,7 @@ client.on('messageCreate', async (message) => {
             .setDescription(`Aqui estão todos os comandos (\`${CONFIG.PREFIXO}\`) que podes utilizar:`)
             .addFields(
                 { name: '<:people:1535221492520976384> Geral / Membros', value: '`!comandos` - Mostra esta lista\n`!relatorio` - Abre formulário de relatório\n`!sugestoes` - Envia o painel de sugestões\n`!avisos` - Envia o painel de avisos\n`!agenda` - Envia o painel de agenda\n`!hierarquia` - Mostra a hierarquia da organização' },
-                { name: '🛡 Gestão de Cargos & Staff', value: '`!pedirset` - Envia o painel de sets (Admin)\n`!recrutamento` - Envia o painel de registo de recrutamento (Admin)\n`!anuncios` - Envia o botão de criar anúncio (Admin)\n`!reuniao` - Envia aviso de reunião por DM (Admin)\n`!clear [1-99]` - Limpa mensagens (Moderadores)' }
+                { name: '🛡 Gestão de Cargos & Staff', value: '`!pedirset` - Envia o painel de sets (Admin)\n`!recrutamento` - Envia o painel de registo de recrutamento (Admin)\n`!anuncios` - Envia o botão de criar anúncio (Admin)\n`!reuniao` - Envia o painel de convocação de reunião (Admin)\n`!clear [1-99]` - Limpa mensagens (Moderadores)' }
             )
             .setFooter({ text: 'NoxAssistant 2026 ©' });
 
@@ -530,13 +530,25 @@ client.on('messageCreate', async (message) => {
         if (!message.member.permissions.has(PermissionFlagsBits.Administrator)) {
             return responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Apenas Administradores podem usar este comando.` });
         }
+
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId('btn_abrir_reuniao')
-                .setLabel('📅 Agendar Reunião (Abrir Modal)')
+                .setLabel('📅 Agendar Reunião')
                 .setStyle(ButtonStyle.Success)
         );
-        return responderEApagar({ content: `${CONFIG.EMOJIS.info} Clica no botão abaixo para preencher os dados da reunião:`, components: [row] });
+
+        const payload = v2({
+            content: `## <:36927calendar:1533450467873394789> Convocação de Reunião\nPrecisas de convocar uma reunião geral para todos os membros do servidor?\n\n> Clica no botão abaixo para abrires o formulário e definires a hora e o motivo da reunião.\n\n-# Será enviada uma mensagem privada (DM) a todos os membros do servidor.`,
+            imageUrl: 'https://i.postimg.cc/VNPjBpps/Design-sem-nome-(2).png',
+            footer: '-# NoxAssistant 2026 ©',
+            accentColor: 0x5865F2
+        }, [row]);
+
+        const canalReuniaoAlvo = message.guild.channels.cache.get(CONFIG.CANAL_ANUNCIOS_ID);
+        if (!canalReuniaoAlvo) { return responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Erro: O canal de reuniões não está configurado.` }); }
+        await canalReuniaoAlvo.send(payload);
+        return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Painel de reunião enviado com sucesso!` });
     }
 
     if (commandName === 'clear') {
