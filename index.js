@@ -728,8 +728,8 @@ client.on('interactionCreate', async (interaction) => {
             const embedAgenda = new EmbedBuilder()
                 .setTitle(`📅 [AGENDA] ${tipo}`)
                 .addFields(
-                    { name: '⏰ Data e Hora', value: `\`${dataHora}\``, inline: false },
-                    { name: '📝 Detalhes', value: descricao, inline: false }
+                    { name: '<:1f557:1535298038225047584> Data e Hora', value: `\`${dataHora}\``, inline: false },
+                    { name: '<:New:1535296381000876112> Detalhes', value: descricao, inline: false }
                 )
                 .setColor(0x3498DB)
                 .setTimestamp()
@@ -766,7 +766,7 @@ client.on('interactionCreate', async (interaction) => {
             );
 
             const payloadRelatorio = v2({
-                content: `## <:3128newsweather:1533484043289624697> Novo Relatório Submetido\n<:7442users:1533483075051458580> **Autor:** ${interaction.user} (\`${interaction.user.id}\`)\n<:197546clock:1533483534797504602> **Data / Hora:** \`${dataAtual}\`\n\n📌 **Título:** **${titulo}**\n\n📝 **Descrição:**\n${descricao}\n\n🔗 **Provas / Anexos:**\n${provas}`,
+                content: `## <:3128newsweather:1533484043289624697> Novo Relatório Submetido\n<:7442users:1533483075051458580> **Autor:** ${interaction.user} (\`${interaction.user.id}\`)\n<:197546clock:1533483534797504602> **Data / Hora:** \`${dataAtual}\`\n\n📌 **Título:** **${titulo}**\n\n<:New:1535296381000876112> **Descrição:**\n${descricao}\n\n🔗 **Provas / Anexos:**\n${provas}`,
                 imageUrl: interaction.user.displayAvatarURL({ extension: 'png', size: 128 }),
                 thumbnailRight: true,
                 footer: '-# Sistema de Relatórios · NoxAssistant 2026 ©',
@@ -836,7 +836,7 @@ client.on('interactionCreate', async (interaction) => {
             );
 
             const payloadLog = v2({
-                content: `## 💡 Nova Proposta de Ideia / Ação\n**Autor:** ${interaction.user} (\`${interaction.user.id}\`)\n**Categoria:** \`${tipo}\`\n\n📌 **Título:** **${titulo}**\n\n📝 **Detalhes:**\n${descricao}`,
+                content: `## 💡 Nova Proposta de Ideia / Ação\n**Autor:** ${interaction.user} (\`${interaction.user.id}\`)\n**Categoria:** \`${tipo}\`\n\n📌 **Título:** **${titulo}**\n\n<:New:1535296381000876112> **Detalhes:**\n${descricao}`,
                 imageUrl: interaction.user.displayAvatarURL({ extension: 'png', size: 128 }),
                 thumbnailRight: true,
                 footer: '-# Sistema de Ideias · NoxAssistant 2026 ©',
@@ -902,7 +902,7 @@ client.on('interactionCreate', async (interaction) => {
             const membros = await interaction.guild.members.fetch();
             let enviados = 0;
 
-            const mensagemDM = `${CONFIG.EMOJIS.aviso} **Aviso Geral de Reunião**\n\n<:people:1535221492520976384> **Convocada por:** ${interaction.user}\n⏰ **Horas:** \`${hora}\`\n📝 **Motivo:** ${motivo}\n\nAtentamente,\nEquipa de Administração`;
+            const mensagemDM = `${CONFIG.EMOJIS.aviso} **Aviso Geral de Reunião**\n\n<:people:1535221492520976384> **Convocada por:** ${interaction.user}\n<:1f557:1535298038225047584> **Horas:** \`${hora}\`\n<:New:1535296381000876112> **Motivo:** ${motivo}\n\nAtentamente,\nEquipa de Administração`;
 
             for (const [, member] of membros) {
                 if (member.user.bot) continue;
