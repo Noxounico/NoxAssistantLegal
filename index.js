@@ -289,7 +289,7 @@ client.on('messageCreate', async (message) => {
             .setColor(0x5865F2)
             .setDescription(`Aqui estão todos os comandos (\`${CONFIG.PREFIXO}\`) que podes utilizar:`)
             .addFields(
-                { name: '👤 Geral / Membros', value: '`!comandos` - Mostra esta lista\n`!relatorio` - Abre formulário de relatório\n`!sugestoes` - Envia o painel de sugestões\n`!avisos` - Envia o painel de avisos\n`!agenda` - Envia o painel de agenda\n`!hierarquia` - Mostra a hierarquia da organização' },
+                { name: '<:people:1535221492520976384> Geral / Membros', value: '`!comandos` - Mostra esta lista\n`!relatorio` - Abre formulário de relatório\n`!sugestoes` - Envia o painel de sugestões\n`!avisos` - Envia o painel de avisos\n`!agenda` - Envia o painel de agenda\n`!hierarquia` - Mostra a hierarquia da organização' },
                 { name: '🛡 Gestão de Cargos & Staff', value: '`!pedirset` - Envia o painel de sets (Admin)\n`!recrutamento` - Envia o painel de registo de recrutamento (Admin)\n`!anuncios` - Envia o botão de criar anúncio (Admin)\n`!reuniao` - Envia aviso de reunião por DM (Admin)\n`!clear [1-99]` - Limpa mensagens (Moderadores)' }
             )
             .setFooter({ text: 'NoxAssistant 2026 ©' });
@@ -902,7 +902,7 @@ client.on('interactionCreate', async (interaction) => {
             const membros = await interaction.guild.members.fetch();
             let enviados = 0;
 
-            const mensagemDM = `${CONFIG.EMOJIS.aviso} **Aviso Geral de Reunião**\n\n👤 **Convocada por:** ${interaction.user}\n⏰ **Horas:** \`${hora}\`\n📝 **Motivo:** ${motivo}\n\nAtentamente,\nEquipa de Administração`;
+            const mensagemDM = `${CONFIG.EMOJIS.aviso} **Aviso Geral de Reunião**\n\n<:people:1535221492520976384> **Convocada por:** ${interaction.user}\n⏰ **Horas:** \`${hora}\`\n📝 **Motivo:** ${motivo}\n\nAtentamente,\nEquipa de Administração`;
 
             for (const [, member] of membros) {
                 if (member.user.bot) continue;
