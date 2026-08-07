@@ -334,7 +334,9 @@ client.on('messageCreate', async (message) => {
             accentColor: 0x5865F2
         }, [row]);
 
-        await message.channel.send(payload);
+        const canalLogsAlvo = message.guild.channels.cache.get(CONFIG.CANAL_LOGS_ID);
+        if (!canalLogsAlvo) { return responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Erro: O canal de logs não está configurado.` }); }
+        await canalLogsAlvo.send(payload);
         return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Painel de relatório enviado com sucesso!` });
     }
 
@@ -368,7 +370,8 @@ client.on('messageCreate', async (message) => {
     }
 
     if (commandName === 'sugestoes') {
-        const canalAlvo = message.channel;
+        const canalAlvo = message.guild.channels.cache.get(CONFIG.CANAL_LOGS_ID);
+        if (!canalAlvo) { return responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Erro: O canal de logs não está configurado.` }); }
         const optionsMenu = CONFIG.CATEGORIAS_IDEIAS.map(cat =>
             new StringSelectMenuOptionBuilder()
                 .setLabel(`· ${cat.nome}`)
@@ -393,7 +396,8 @@ client.on('messageCreate', async (message) => {
     }
 
     if (commandName === 'avisos') {
-        const canalAlvo = message.channel;
+        const canalAlvo = message.guild.channels.cache.get(CONFIG.CANAL_LOGS_ID);
+        if (!canalAlvo) { return responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Erro: O canal de logs não está configurado.` }); }
         const optionsMenu = CONFIG.CATEGORIAS_AVISOS.map(cat =>
             new StringSelectMenuOptionBuilder()
                 .setLabel(`· ${cat.nome}`)
@@ -418,7 +422,8 @@ client.on('messageCreate', async (message) => {
     }
 
     if (commandName === 'agenda') {
-        const canalAlvo = message.channel;
+        const canalAlvo = message.guild.channels.cache.get(CONFIG.CANAL_LOGS_ID);
+        if (!canalAlvo) { return responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Erro: O canal de logs não está configurado.` }); }
         const optionsMenu = CONFIG.CATEGORIAS_AGENDA.map(cat =>
             new StringSelectMenuOptionBuilder()
                 .setLabel(`· ${cat.nome}`)
@@ -464,7 +469,9 @@ client.on('messageCreate', async (message) => {
             accentColor: 0x2F3136
         }, [row]);
 
-        await message.channel.send(payload);
+        const canalLogsAlvo = message.guild.channels.cache.get(CONFIG.CANAL_LOGS_ID);
+        if (!canalLogsAlvo) { return responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Erro: O canal de logs não está configurado.` }); }
+        await canalLogsAlvo.send(payload);
         return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Painel de sets enviado com sucesso!` });
     }
 
@@ -485,7 +492,9 @@ client.on('messageCreate', async (message) => {
             accentColor: 0xE67E22
         }, [row]);
 
-        await message.channel.send(payload);
+        const canalLogsAlvo = message.guild.channels.cache.get(CONFIG.CANAL_LOGS_ID);
+        if (!canalLogsAlvo) { return responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Erro: O canal de logs não está configurado.` }); }
+        await canalLogsAlvo.send(payload);
         return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Painel de anúncios enviado com sucesso!` });
     }
 
@@ -506,7 +515,9 @@ client.on('messageCreate', async (message) => {
             accentColor: 0x2F3136
         }, [row]);
 
-        await message.channel.send(payload);
+        const canalLogsAlvo = message.guild.channels.cache.get(CONFIG.CANAL_LOGS_ID);
+        if (!canalLogsAlvo) { return responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Erro: O canal de logs não está configurado.` }); }
+        await canalLogsAlvo.send(payload);
         return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Painel de recrutamento enviado com sucesso!` });
     }
 
