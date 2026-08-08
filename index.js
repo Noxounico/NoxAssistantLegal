@@ -79,6 +79,15 @@ const CONFIG = {
     CANAL_AVISOS_ID: '1527001349710024855',
     CANAL_AGENDA_ID: '1533246749249114312',
     CANAL_ANUNCIOS_ID: '1534491215771340800',
+    CANAL_PAINEL_ANUNCIOS_ID: '1535549478923141120',
+    CARGOS_REUNIAO_STAFF: [
+        '1534491171135557723', // Cod
+        '1534491172133666942', // Prefeitura
+        '1534491174658768978', // Resp.Geral
+        '1534491175887835166', // Diretor geral
+        '1534491176718307358', // Staff
+        '1534491177720483861'  // Coronel
+    ],
 
     CARGO_IDEIAS_ID: '1532811905071321218', 
     PREFIXO: '!',
@@ -290,7 +299,7 @@ client.on('messageCreate', async (message) => {
             .setDescription(`Aqui estão todos os comandos (\`${CONFIG.PREFIXO}\`) que podes utilizar:`)
             .addFields(
                 { name: '<:people:1535221492520976384> Geral / Membros', value: '`!comandos` - Mostra esta lista\n`!relatorio` - Abre formulário de relatório\n`!sugestoes` - Envia o painel de sugestões\n`!avisos` - Envia o painel de avisos\n`!agenda` - Envia o painel de agenda\n`!hierarquia` - Mostra a hierarquia da organização' },
-                { name: '🛡 Gestão de Cargos & Staff', value: '`!pedirset` - Envia o painel de sets (Admin)\n`!recrutamento` - Envia o painel de registo de recrutamento (Admin)\n`!anuncios` - Envia o botão de criar anúncio (Admin)\n`!reuniao` - Envia aviso de reunião por DM (Admin)\n`!clear [1-99]` - Limpa mensagens (Moderadores)' }
+                { name: '🛡 Gestão de Cargos & Staff', value: '`!pedirset` - Envia o painel de sets (Admin)\n`!recrutamento` - Envia o painel de registo de recrutamento (Admin)\n`!anuncios` - Envia o painel de anúncios/reunião (Admin)\n`!clear [1-99]` - Limpa mensagens (Moderadores)' }
             )
             .setFooter({ text: 'NoxAssistant 2026 ©' });
 
@@ -479,22 +488,34 @@ client.on('messageCreate', async (message) => {
         if (!message.member.permissions.has(PermissionFlagsBits.Administrator)) {
             return responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Apenas Administradores podem usar este comando.` });
         }
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId('btn_abrir_anuncio')
-                .setLabel('📢 Criar Novo Anúncio')
-                .setStyle(ButtonStyle.Success)
-        );
+        const selectMenu = new StringSelectMenuBuilder()
+            .setCustomId('menu_anuncio_tipo')
+            .setPlaceholder('Selecione o tipo de comunicado...')
+            .addOptions(
+                new StringSelectMenuOptionBuilder()
+                    .setLabel('· Anúncio Geral')
+                    .setDescription('Publica um anúncio oficial no canal de comunicados')
+                    .setValue('anuncio'),
+                new StringSelectMenuOptionBuilder()
+                    .setLabel('· Reunião')
+                    .setDescription('Envia um aviso de reunião por DM a todos os membros')
+                    .setValue('reuniao'),
+                new StringSelectMenuOptionBuilder()
+                    .setLabel('· Reunião Staff')
+                    .setDescription('Envia um aviso de reunião por DM apenas à Staff / Alta Patente')
+                    .setValue('reuniao_staff')
+            );
+        const row = new ActionRowBuilder().addComponents(selectMenu);
         const payload = v2({
-            content: `## 📢 Painel de Anúncios\nPrecisas de comunicar algo importante a toda a comunidade?\n\n> Clica no botão abaixo para abrires o formulário e criares um novo anúncio oficial.\n\n-# O anúncio será publicado automaticamente no canal correspondente.`,
+            content: `## 📢 Painel de Anúncios\nPrecisas de comunicar algo importante à comunidade?\n\n> Utiliza o menu abaixo para escolheres entre criar um Anúncio Geral ou convocar uma Reunião.\n\n-# O anúncio será publicado automaticamente no canal correspondente.`,
             imageUrl: 'https://i.postimg.cc/VNPjBpps/Design-sem-nome-(2).png',
             footer: '-# NoxAssistant 2026 ©',
             accentColor: 0xE67E22
         }, [row]);
 
-        const canalLogsAlvo = message.guild.channels.cache.get(CONFIG.CANAL_LOGS_ID);
-        if (!canalLogsAlvo) { return responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Erro: O canal de logs não está configurado.` }); }
-        await canalLogsAlvo.send(payload);
+        const canalAnunciosAlvo = message.guild.channels.cache.get(CONFIG.CANAL_PAINEL_ANUNCIOS_ID);
+        if (!canalAnunciosAlvo) { return responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Erro: O canal do painel de anúncios não está configurado.` }); }
+        await canalAnunciosAlvo.send(payload);
         return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Painel de anúncios enviado com sucesso!` });
     }
 
@@ -519,19 +540,6 @@ client.on('messageCreate', async (message) => {
         if (!canalLogsAlvo) { return responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Erro: O canal de logs não está configurado.` }); }
         await canalLogsAlvo.send(payload);
         return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Painel de recrutamento enviado com sucesso!` });
-    }
-
-    if (commandName === 'reuniao') {
-        if (!message.member.permissions.has(PermissionFlagsBits.Administrator)) {
-            return responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Apenas Administradores podem usar este comando.` });
-        }
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId('btn_abrir_reuniao')
-                .setLabel('📅 Agendar Reunião (Abrir Modal)')
-                .setStyle(ButtonStyle.Success)
-        );
-        return responderEApagar({ content: `${CONFIG.EMOJIS.info} Clica no botão abaixo para preencher os dados da reunião:`, components: [row] });
     }
 
     if (commandName === 'clear') {
@@ -927,6 +935,32 @@ client.on('interactionCreate', async (interaction) => {
             await interaction.followUp({ content: `${CONFIG.EMOJIS.sucesso} Concluído! Mensagem enviada a **${enviados}** membros.`, flags: 64 });
             return;
         }
+
+        if (interaction.customId === 'modal_reuniao_staff') {
+            await interaction.deferReply({ flags: 64 });
+            const hora = interaction.fields.getTextInputValue('input_hora');
+            const motivo = interaction.fields.getTextInputValue('input_motivo');
+
+            await interaction.editReply({ content: `${CONFIG.EMOJIS.sucesso} A iniciar o envio das mensagens privadas à Staff...` });
+
+            const membros = await interaction.guild.members.fetch();
+            let enviados = 0;
+
+            const mensagemDM = `${CONFIG.EMOJIS.aviso} **Aviso de Reunião Staff**\n\n<:people:1535221492520976384> **Convocada por:** ${interaction.user}\n<:1f557:1535298038225047584> **Horas:** \`${hora}\`\n<:New:1535296381000876112> **Motivo:** ${motivo}\n\nAtentamente,\nEquipa de Administração`;
+
+            for (const [, member] of membros) {
+                if (member.user.bot) continue;
+                if (!member.roles.cache.some(role => CONFIG.CARGOS_REUNIAO_STAFF.includes(role.id))) continue;
+                try {
+                    await member.send(mensagemDM);
+                    enviados++;
+                    await new Promise(res => setTimeout(res, 1000));
+                } catch (err) {}
+            }
+
+            await interaction.followUp({ content: `${CONFIG.EMOJIS.sucesso} Concluído! Mensagem enviada a **${enviados}** membros da Staff.`, flags: 64 });
+            return;
+        }
     }
 
     if (interaction.isButton()) {
@@ -966,38 +1000,59 @@ client.on('interactionCreate', async (interaction) => {
             return;
         }
 
-        if (interaction.customId === 'btn_abrir_anuncio') {
-            const modal = new ModalBuilder()
-                .setCustomId('modal_anuncio')
-                .setTitle('Criar Anúncio Oficial');
+        if (interaction.customId === 'menu_anuncio_tipo') {
+            const tipoEscolhido = interaction.values[0];
 
-            const tituloInput = new TextInputBuilder().setCustomId('input_titulo_anuncio').setLabel('Título do Anúncio').setStyle(TextInputStyle.Short).setRequired(true);
-            const msgInput = new TextInputBuilder().setCustomId('input_msg_anuncio').setLabel('Mensagem do Anúncio').setStyle(TextInputStyle.Paragraph).setRequired(true);
+            if (tipoEscolhido === 'anuncio') {
+                const modal = new ModalBuilder()
+                    .setCustomId('modal_anuncio')
+                    .setTitle('Criar Anúncio Oficial');
 
-            modal.addComponents(
-                new ActionRowBuilder().addComponents(tituloInput),
-                new ActionRowBuilder().addComponents(msgInput)
-            );
+                const tituloInput = new TextInputBuilder().setCustomId('input_titulo_anuncio').setLabel('Título do Anúncio').setStyle(TextInputStyle.Short).setRequired(true);
+                const msgInput = new TextInputBuilder().setCustomId('input_msg_anuncio').setLabel('Mensagem do Anúncio').setStyle(TextInputStyle.Paragraph).setRequired(true);
 
-            await interaction.showModal(modal);
-            return;
-        }
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(tituloInput),
+                    new ActionRowBuilder().addComponents(msgInput)
+                );
 
-        if (interaction.customId === 'btn_abrir_reuniao') {
-            const modal = new ModalBuilder()
-                .setCustomId('modal_reuniao')
-                .setTitle('Agendar Reunião (DM a todos)');
+                await interaction.showModal(modal);
+                return;
+            }
 
-            const horaInput = new TextInputBuilder().setCustomId('input_hora').setLabel('Horas').setStyle(TextInputStyle.Short).setPlaceholder('Ex: 21:00').setRequired(true);
-            const motivoInput = new TextInputBuilder().setCustomId('input_motivo').setLabel('Motivo').setStyle(TextInputStyle.Paragraph).setRequired(true);
+            if (tipoEscolhido === 'reuniao') {
+                const modal = new ModalBuilder()
+                    .setCustomId('modal_reuniao')
+                    .setTitle('Agendar Reunião (DM a todos)');
 
-            modal.addComponents(
-                new ActionRowBuilder().addComponents(horaInput),
-                new ActionRowBuilder().addComponents(motivoInput)
-            );
+                const horaInput = new TextInputBuilder().setCustomId('input_hora').setLabel('Horas').setStyle(TextInputStyle.Short).setPlaceholder('Ex: 21:00').setRequired(true);
+                const motivoInput = new TextInputBuilder().setCustomId('input_motivo').setLabel('Motivo').setStyle(TextInputStyle.Paragraph).setRequired(true);
 
-            await interaction.showModal(modal);
-            return;
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(horaInput),
+                    new ActionRowBuilder().addComponents(motivoInput)
+                );
+
+                await interaction.showModal(modal);
+                return;
+            }
+
+            if (tipoEscolhido === 'reuniao_staff') {
+                const modal = new ModalBuilder()
+                    .setCustomId('modal_reuniao_staff')
+                    .setTitle('Agendar Reunião Staff (DM à Staff)');
+
+                const horaInput = new TextInputBuilder().setCustomId('input_hora').setLabel('Horas').setStyle(TextInputStyle.Short).setPlaceholder('Ex: 21:00').setRequired(true);
+                const motivoInput = new TextInputBuilder().setCustomId('input_motivo').setLabel('Motivo').setStyle(TextInputStyle.Paragraph).setRequired(true);
+
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(horaInput),
+                    new ActionRowBuilder().addComponents(motivoInput)
+                );
+
+                await interaction.showModal(modal);
+                return;
+            }
         }
 
         if (interaction.customId.startsWith('aprovar_agenda_')) {
