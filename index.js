@@ -22,18 +22,22 @@ const fs = require('fs');
 const path = require('path');
 
 // ---- Proteção contra instâncias duplicadas do bot ----
+// Evita que o mesmo bot fique "duplicado" no Discord quando corres
+// `node index.js` mais do que uma vez (ex: 2 terminais abertos, ou
+// esqueceste-te de fechar a janela anterior).
 const LOCK_FILE = path.join(__dirname, 'bot.lock');
 
 function verificarInstanciaUnica() {
     if (fs.existsSync(LOCK_FILE)) {
         const pidAntigo = parseInt(fs.readFileSync(LOCK_FILE, 'utf8'), 10);
         try {
+            // process.kill(pid, 0) não mata nada, só testa se o processo existe
             process.kill(pidAntigo, 0);
             console.error(`❌ Já existe uma instância deste bot a correr (PID ${pidAntigo}).`);
             console.error(`   Fecha essa janela/processo antes de abrir uma nova, ou apaga "bot.lock" se tiveres a certeza que não há nenhum a correr.`);
             process.exit(1);
         } catch (e) {
-            // O PID guardado já não existe -> pode continuar
+            // O PID guardado já não existe (bot.lock ficou "preso" de uma vez anterior) -> pode continuar
         }
     }
     fs.writeFileSync(LOCK_FILE, String(process.pid), 'utf8');
@@ -112,6 +116,12 @@ const CONFIG = {
         { id_menu: 'agenda_evento', nome: 'Evento Programado', desc: 'Agendar data e hora para evento' }
     ],
 
+    // ---- Configuração do comando !hierarquia ----
+    // Para cada categoria, "cargos" é uma lista de IDs de cargo (roles) do Discord.
+    // Todos os membros que tiverem QUALQUER um desses cargos aparecem listados nessa secção.
+    // ⚠ TENS DE SUBSTITUIR os valores "COLOCA_AQUI_..." pelos IDs reais dos teus cargos!
+    // Como obter o ID de um cargo: Definições do Discord > Avançado > ativar "Modo de Programador",
+    // depois vai a Definições do Servidor > Cargos, clica com o botão direito no cargo > "Copiar ID do Cargo".
     CATEGORIAS_HIERARQUIA: [
         { titulo: 'CORONEL', cargos: ['1534491177720483861'] },
         { titulo: 'TENENTE-CORONEL', cargos: ['1534491178425254039'] },
@@ -132,10 +142,12 @@ const CONFIG = {
     EMOJIS: {
         sucesso: '<:correct:1535003452575322192>',
         aviso: '<:alerta:1535009548878745758>',
-        info: '<:info:1520249612542279780>',
+        info: '<:New:1535296381000876112>',
         cancelar: '<:errado:1535004198339608677>',
         ticket: '<:ticket:1520278432687325195>',
+        // ID de emoji personalizado atualizado (válido, enviado pelo utilizador)
         auth: '<:272410anonymous:1533449386594664509>',
+        // Emojis decorativos usados antes e depois de cada nome no !hierarquia.
         hierarquiaEsq: '<:AK47:1534850499948449872>',
         hierarquiaDir: '<:AK47:1534850499948449872>'
     }
@@ -160,31 +172,9 @@ async function responderETemporizar(interactionOrMessage, conteudo, ephemeral = 
     }
 }
 
-// ---- Notificação de erro: responde no canal (efémero) E manda PV ao utilizador ----
-async function notificarErro(interaction, err) {
-    console.error(`❌ Erro na interação [${interaction.customId || interaction.commandName}]:`, err);
-
-    const mensagemErro = `${CONFIG.EMOJIS.cancelar} Ocorreu um erro ao processar a tua ação. Tenta novamente ou contacta a Staff.`;
-
-    // 1) Responde no canal (efémero), se ainda for possível
-    try {
-        if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ content: mensagemErro, flags: 64 });
-        } else {
-            await interaction.reply({ content: mensagemErro, flags: 64 });
-        }
-    } catch (e) {
-        console.error('Não foi possível responder no canal:', e);
-    }
-
-    // 2) Manda também por PV (DM), para o caso de a resposta efémera falhar/expirar
-    try {
-        await interaction.user.send(`${CONFIG.EMOJIS.aviso} A tua última ação no servidor **${interaction.guild?.name ?? ''}** falhou. Tenta novamente ou contacta a Staff.`);
-    } catch (e) {
-        // Utilizador pode ter as DMs fechadas — ignora silenciosamente
-    }
-}
-
+// Os comandos deixaram de ser de barra (/) — agora são todos por prefixo (!),
+// tratados no listener client.on('messageCreate', ...) mais abaixo.
+// IDs dos cargos que podem aprovar/rejeitar Ideias / Ações:
 const CARGOS_APROVAR_IDEIAS = [
     '1527000274038947890',
     '1527000248982175764',
@@ -195,6 +185,8 @@ function membroPodeAprovarIdeias(member) {
     return member.roles.cache.some(role => CARGOS_APROVAR_IDEIAS.includes(role.id));
 }
 
+// Só quem tem o cargo CARGO_APROVAR_RECRUTAMENTO_ID, ou qualquer cargo posicionado
+// acima dele na hierarquia de cargos do servidor (alta patente), pode aprovar/negar recrutamentos.
 function membroPodeAprovarRecrutamento(member) {
     const cargoBase = member.guild.roles.cache.get(CONFIG.CARGO_APROVAR_RECRUTAMENTO_ID);
     if (!cargoBase) return false;
@@ -204,6 +196,8 @@ function membroPodeAprovarRecrutamento(member) {
 client.once('clientReady', async () => {
     console.log(`🤖 ${client.user.tag} está online e pronto a funcionar com comandos por prefixo (${CONFIG.PREFIXO})!`);
 
+    // Apaga quaisquer comandos de barra (/) antigos que possam ter ficado registados
+    // no Discord de testes anteriores, para não aparecerem duplicados nem confundirem.
     try {
         const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
         await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
@@ -279,15 +273,15 @@ client.on('messageCreate', async (message) => {
     const args = message.content.slice(CONFIG.PREFIXO.length).trim().split(/\s+/);
     const commandName = args.shift().toLowerCase();
 
+    // Apaga a mensagem do comando (ex: "!ideias") do canal, para não ficar lá visível
     message.delete().catch(() => {});
 
+    // Função auxiliar para responder e apagar automaticamente após 5 segundos
     async function responderEApagar(payloadOptions) {
         const rep = await message.channel.send(payloadOptions);
         setTimeout(() => rep.delete().catch(() => {}), 3000);
         return rep;
     }
-
-    try {
 
     if (commandName === 'comandos') {
         const embedGeral = new EmbedBuilder()
@@ -296,7 +290,7 @@ client.on('messageCreate', async (message) => {
             .setDescription(`Aqui estão todos os comandos (\`${CONFIG.PREFIXO}\`) que podes utilizar:`)
             .addFields(
                 { name: '<:people:1535221492520976384> Geral / Membros', value: '`!comandos` - Mostra esta lista\n`!relatorio` - Abre formulário de relatório\n`!sugestoes` - Envia o painel de sugestões\n`!avisos` - Envia o painel de avisos\n`!agenda` - Envia o painel de agenda\n`!hierarquia` - Mostra a hierarquia da organização' },
-                { name: '🛡 Gestão de Cargos & Staff', value: '`!pedirset` - Envia o painel de sets (Admin)\n`!recrutamento` - Envia o painel de registo de recrutamento (Admin)\n`!anuncios` - Envia o botão de criar anúncio (Admin)\n`!reuniao` - Envia o painel de convocação de reunião (Admin)\n`!clear [1-99]` - Limpa mensagens (Moderadores)' }
+                { name: '🛡 Gestão de Cargos & Staff', value: '`!pedirset` - Envia o painel de sets (Admin)\n`!recrutamento` - Envia o painel de registo de recrutamento (Admin)\n`!anuncios` - Envia o botão de criar anúncio (Admin)\n`!reuniao` - Envia aviso de reunião por DM (Admin)\n`!clear [1-99]` - Limpa mensagens (Moderadores)' }
             )
             .setFooter({ text: 'NoxAssistant 2026 ©' });
 
@@ -347,7 +341,7 @@ client.on('messageCreate', async (message) => {
     }
 
     if (commandName === 'hierarquia') {
-        await message.guild.members.fetch().catch(() => {});
+        await message.guild.members.fetch().catch(() => {}); // garante que a cache de membros está atualizada
 
         let conteudo = '# HIERARQUIA\n\n';
         for (const categoria of CONFIG.CATEGORIAS_HIERARQUIA) {
@@ -367,6 +361,7 @@ client.on('messageCreate', async (message) => {
             conteudo += '\n';
         }
 
+        // Discord limita mensagens a 2000 caracteres — se a hierarquia for grande, divide em várias mensagens.
         const blocos = conteudo.trim().match(/[\s\S]{1,1900}(\n|$)/g) || [conteudo.trim()];
         for (const bloco of blocos) {
             await message.channel.send({ content: bloco.trim() });
@@ -530,25 +525,13 @@ client.on('messageCreate', async (message) => {
         if (!message.member.permissions.has(PermissionFlagsBits.Administrator)) {
             return responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Apenas Administradores podem usar este comando.` });
         }
-
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId('btn_abrir_reuniao')
-                .setLabel('📅 Agendar Reunião')
+                .setLabel('📅 Agendar Reunião (Abrir Modal)')
                 .setStyle(ButtonStyle.Success)
         );
-
-        const payload = v2({
-            content: `## <:36927calendar:1533450467873394789> Convocação de Reunião\nPrecisas de convocar uma reunião geral para todos os membros do servidor?\n\n> Clica no botão abaixo para abrires o formulário e definires a hora e o motivo da reunião.\n\n-# Será enviada uma mensagem privada (DM) a todos os membros do servidor.`,
-            imageUrl: 'https://i.postimg.cc/VNPjBpps/Design-sem-nome-(2).png',
-            footer: '-# NoxAssistant 2026 ©',
-            accentColor: 0x5865F2
-        }, [row]);
-
-        const canalReuniaoAlvo = message.guild.channels.cache.get(CONFIG.CANAL_ANUNCIOS_ID);
-        if (!canalReuniaoAlvo) { return responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Erro: O canal de reuniões não está configurado.` }); }
-        await canalReuniaoAlvo.send(payload);
-        return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Painel de reunião enviado com sucesso!` });
+        return responderEApagar({ content: `${CONFIG.EMOJIS.info} Clica no botão abaixo para preencher os dados da reunião:`, components: [row] });
     }
 
     if (commandName === 'clear') {
@@ -563,16 +546,10 @@ client.on('messageCreate', async (message) => {
         return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} **${amount}** mensagens limpas com sucesso!` });
     }
 
-    } catch (err) {
-        console.error(`❌ Erro ao processar comando !${commandName}:`, err);
-        responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Ocorreu um erro ao executar este comando.` }).catch(() => {});
-    }
 });
 
 client.on('interactionCreate', async (interaction) => {
     if (!interaction.isMessageComponent() && !interaction.isModalSubmit()) return;
-
-    try {
 
     if (interaction.isStringSelectMenu()) {
         if (interaction.customId === 'menu_pedir_set') {
@@ -1365,10 +1342,6 @@ client.on('interactionCreate', async (interaction) => {
                 await targetMember.send({ embeds: [embedDM] }).catch(() => {});
             }
         }
-    }
-
-    } catch (err) {
-        await notificarErro(interaction, err);
     }
 });
 
