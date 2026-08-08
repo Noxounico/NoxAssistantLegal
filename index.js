@@ -74,6 +74,11 @@ const CONFIG = {
     CANAL_LOGS_IDEIAS_ID: '1532811754755850472', 
     CANAL_LOGS_SETS_ID: '1534491258456637531',
     CANAL_RECRUTAMENTO_ID: '1534853087272108152',
+    IMAGENS_FARDAMENTO_DEFAULT: 'https://i.postimg.cc/VNPjBpps/Design-sem-nome-(2).png',
+    IMAGENS_FARDAMENTO: {
+        // Coloca aqui o link da imagem do fardamento de cada patente, ex:
+        // 'Coronel': 'https://i.postimg.cc/xxxxxxx/coronel.png',
+    },
     CARGO_APROVAR_RECRUTAMENTO_ID: '1534491173492625479',
     CANAL_PAINEL_IDEIAS_ID: '1532811239661764739',
     CANAL_AVISOS_ID: '1527001349710024855',
@@ -299,7 +304,7 @@ client.on('messageCreate', async (message) => {
             .setDescription(`Aqui estão todos os comandos (\`${CONFIG.PREFIXO}\`) que podes utilizar:`)
             .addFields(
                 { name: '<:people:1535221492520976384> Geral / Membros', value: '`!comandos` - Mostra esta lista\n`!relatorio` - Abre formulário de relatório\n`!sugestoes` - Envia o painel de sugestões\n`!avisos` - Envia o painel de avisos\n`!agenda` - Envia o painel de agenda\n`!hierarquia` - Mostra a hierarquia da organização' },
-                { name: '🛡 Gestão de Cargos & Staff', value: '`!pedirset` - Envia o painel de sets (Admin)\n`!recrutamento` - Envia o painel de registo de recrutamento (Admin)\n`!anuncios` - Envia o painel de anúncios/reunião (Admin)\n`!clear [1-99]` - Limpa mensagens (Moderadores)' }
+                { name: '🛡 Gestão de Cargos & Staff', value: '`!pedirset` - Envia o painel de sets (Admin)\n`!recrutamento` - Envia o painel de registo de recrutamento (Admin)\n`!fardamento` - Envia o catálogo de fardamento por patente (Admin)\n`!anuncios` - Envia o painel de anúncios/reunião (Admin)\n`!clear [1-99]` - Limpa mensagens (Moderadores)' }
             )
             .setFooter({ text: 'NoxAssistant 2026 ©' });
 
@@ -540,6 +545,34 @@ client.on('messageCreate', async (message) => {
         if (!canalLogsAlvo) { return responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Erro: O canal de logs não está configurado.` }); }
         await canalLogsAlvo.send(payload);
         return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Painel de recrutamento enviado com sucesso!` });
+    }
+
+    if (commandName === 'fardamento') {
+        if (!message.member.permissions.has(PermissionFlagsBits.Administrator)) {
+            return responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Apenas Administradores podem usar este comando.` });
+        }
+        const optionsMenu = CONFIG.CARGOS_DISPONIVEIS.map(cargo =>
+            new StringSelectMenuOptionBuilder()
+                .setLabel(`· ${cargo.nome}`)
+                .setDescription(`Ver o fardamento de ${cargo.nome}`)
+                .setValue(cargo.nome)
+        );
+        const selectMenu = new StringSelectMenuBuilder()
+            .setCustomId('menu_fardamento_patente')
+            .setPlaceholder('Selecione a patente para ver o fardamento...')
+            .addOptions(optionsMenu);
+        const row = new ActionRowBuilder().addComponents(selectMenu);
+        const payload = v2({
+            content: `## 🎽 Catálogo de Fardamento\nQueres saber qual o fardamento oficial da tua patente?\n\n> Seleciona a tua patente no menu abaixo para veres a farda correspondente.`,
+            imageUrl: 'https://i.postimg.cc/VNPjBpps/Design-sem-nome-(2).png',
+            footer: '-# NoxAssistant 2026 ©',
+            accentColor: 0x2F3136
+        }, [row]);
+
+        const canalLogsAlvo = message.guild.channels.cache.get(CONFIG.CANAL_LOGS_ID);
+        if (!canalLogsAlvo) { return responderEApagar({ content: `${CONFIG.EMOJIS.cancelar} Erro: O canal de logs não está configurado.` }); }
+        await canalLogsAlvo.send(payload);
+        return responderEApagar({ content: `${CONFIG.EMOJIS.sucesso} Painel de fardamento enviado com sucesso!` });
     }
 
     if (commandName === 'clear') {
@@ -998,6 +1031,19 @@ client.on('interactionCreate', async (interaction) => {
 
             await interaction.showModal(modal);
             return;
+        }
+
+        if (interaction.customId === 'menu_fardamento_patente') {
+            const patenteEscolhida = interaction.values[0];
+            const imagemFarda = CONFIG.IMAGENS_FARDAMENTO[patenteEscolhida] || CONFIG.IMAGENS_FARDAMENTO_DEFAULT;
+
+            const embedFarda = new EmbedBuilder()
+                .setTitle(`🎽 Fardamento · ${patenteEscolhida}`)
+                .setImage(imagemFarda)
+                .setColor(0x2F3136)
+                .setFooter({ text: 'NoxAssistant 2026 ©' });
+
+            return interaction.reply({ embeds: [embedFarda], flags: 64 });
         }
 
         if (interaction.customId === 'menu_anuncio_tipo') {
